@@ -62,6 +62,11 @@ sesión de administrador se puede además editar y borrar cualquier publicación
 
 **Tonos.** Claro, oscuro, papel, o el que tenga puesto el sistema. Se elige arriba a la derecha.
 
+**En el teléfono.** La app funciona en pantalla chica: una sola columna, la página entera scrollea,
+y los controles tienen el tamaño necesario para tocarlos con el dedo. En el lienzo, mantener apretado
+un estado o una flecha abre el mismo menú que el clic derecho en la computadora, y hay botones de
+zoom porque no hay rueda de mouse.
+
 ## Cómo corrige
 
 No compara dibujos: compara lenguajes. Determiniza las dos respuestas, recorre el autómata producto

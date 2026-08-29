@@ -237,8 +237,13 @@ textarea {
   flex: 0 0 auto;
 }
 
+/* El ícono de Deshacer/Rehacer reemplaza al texto solo en pantalla angosta. */
+.icono-btn {
+  display: none;
+}
+
 /* En pantallas angostas la aclaración de la materia sobra. */
-@media (max-width: 760px) {
+@media (max-width: 860px) {
   .marca span {
     display: none;
   }
@@ -497,6 +502,11 @@ textarea {
 
 .campo.mono {
   font-family: var(--mono);
+}
+
+/* Campos que no deben crecer, como el de agregar un símbolo al alfabeto. */
+.campo-corto {
+  width: 78px;
 }
 
 .campo:focus {
@@ -779,25 +789,103 @@ ul {
 }
 
 /*
-  Pantalla angosta: una sola columna y scroll de la página entera. Las alturas
-  pasan a ser de contenido, si no la cinta se sale de su fila y pisa el panel.
+  Pantalla angosta: cambia el modelo de la app.
+
+  En escritorio son paneles de alto fijo, cada uno con su propio scroll. En un
+  teléfono eso no sirve: quedan varias áreas de scroll compitiendo por el mismo
+  pulgar. Acá abajo todo pasa a flujo normal y scrollea la página entera, una
+  sola columna.
+
+  Es importante que .editor deje de ser grilla: con filas de alto automático y
+  los hijos en min-height 0, la fila se colapsa y el contenido se desborda encima
+  del panel de abajo.
 */
 @media (max-width: 1000px) {
-  .editor {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto auto;
-    overflow-y: auto;
+  html,
+  body,
+  #root {
+    height: auto;
   }
+
+  .app {
+    height: auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+
+  .editor {
+    display: flex;
+    flex-direction: column;
+    grid-template-columns: none;
+    grid-template-rows: none;
+    flex: 0 0 auto;
+    overflow: visible;
+  }
+
   .editor-izq {
+    min-height: auto;
     border-right: 0;
     border-bottom: 1px solid var(--linea);
   }
+
+  /* Alto relativo a la pantalla: en un teléfono apaisado 400px se comía todo. */
   .lienzo-caja {
     flex: 0 0 auto;
-    height: 400px;
+    height: 56vh;
+    min-height: 280px;
+    max-height: 460px;
   }
+
   .panel {
     overflow-y: visible;
+  }
+
+  .conversiones,
+  .parciales,
+  .comunidad {
+    flex: 0 0 auto;
+    min-height: 0;
+  }
+
+  .conv-cabecera {
+    padding: 10px 12px 0;
+  }
+
+  .conv-cuerpo {
+    flex: 0 0 auto;
+    min-height: 0;
+    overflow: visible;
+    padding: 14px 12px 40px;
+  }
+
+  .etapa-caja {
+    max-width: none;
+  }
+
+  /* Las filas de controles se apilan en vez de recortarse. */
+  .fila {
+    flex-wrap: wrap;
+  }
+
+  /* Un campo con width 100% forzaba el salto de línea de todo lo que venía
+     después; acá comparte el ancho disponible con sus vecinos. */
+  .fila > .campo {
+    flex: 1 1 130px;
+    width: auto;
+    min-width: 0;
+  }
+
+  /* Los que son cortos por naturaleza no se estiran. */
+  .fila > .campo-corto {
+    flex: 0 0 auto;
+  }
+
+  .etiqueta-campo {
+    white-space: normal;
+  }
+
+  .etapa-cabecera .btn {
+    margin-left: 0;
   }
 }
 
@@ -1354,14 +1442,30 @@ textarea.campo {
   margin-top: 10px;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 1000px) {
   .practica {
-    grid-template-columns: 1fr;
-    grid-template-rows: 240px minmax(0, 1fr);
+    display: flex;
+    flex-direction: column;
+    grid-template-columns: none;
+    grid-template-rows: none;
+    flex: 0 0 auto;
   }
+
+  /* La lista de ejercicios conserva scroll propio: es larga y conviene poder
+     recorrerla sin perder de vista el enunciado que está abajo. */
   .practica-lista {
+    max-height: 42vh;
     border-right: 0;
     border-bottom: 1px solid var(--linea);
+  }
+
+  .practica-detalle {
+    overflow: visible;
+    padding: 16px 14px 40px;
+  }
+
+  .detalle {
+    max-width: none;
   }
 }
 
@@ -1698,4 +1802,207 @@ textarea.campo {
 
 .tarjeta-edicion .etiqueta-campo {
   margin-top: 4px;
+}
+
+/* ==========================================================================
+   Mobile
+   ========================================================================== */
+
+/*
+  Barra en dos filas: arriba la marca y los controles, abajo la navegación a lo
+  ancho. Apretados en una sola fila, Deshacer y Rehacer se salían de la pantalla.
+*/
+@media (max-width: 860px) {
+  .barra {
+    flex-wrap: wrap;
+    gap: 8px 10px;
+    padding: 7px 12px;
+  }
+
+  .nav {
+    order: 3;
+    flex-basis: 100%;
+    margin: 0 -12px;
+    padding: 0 12px;
+  }
+
+  .barra-fin {
+    gap: 6px;
+  }
+
+  .selector-tema select {
+    padding: 3px 4px;
+    font-size: 11.5px;
+  }
+
+  /* Deshacer y Rehacer pasan a símbolo: el texto no entra y se entienden igual. */
+  .texto-btn {
+    display: none;
+  }
+
+  .icono-btn {
+    display: inline;
+    font-size: 15px;
+    line-height: 1;
+  }
+
+  .barra-doc {
+    padding: 8px 12px 10px;
+  }
+
+  .titulo-doc {
+    min-width: 0;
+    flex: 1 1 100%;
+    max-width: none;
+  }
+
+  .seccion {
+    padding: 12px 14px 14px;
+  }
+
+  .item-parcial {
+    padding: 12px 12px 14px;
+  }
+
+  .galeria {
+    grid-template-columns: 1fr;
+  }
+
+  .detalle-enunciado {
+    font-size: 15px;
+  }
+}
+
+/*
+  Dedos, no puntero. Los controles de 12px con 3px de padding son cómodos con
+  mouse e imposibles en un teléfono: acá todo lo interactivo pasa a una altura
+  que se puede tocar sin errar.
+*/
+@media (pointer: coarse) {
+  .btn,
+  .herramientas button,
+  .conmutador button,
+  .nav button,
+  .etapas button {
+    min-height: 40px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .btn.chico {
+    padding-left: 12px;
+    padding-right: 12px;
+    font-size: 13px;
+  }
+
+  .item {
+    padding: 10px 8px;
+    font-size: 13px;
+  }
+
+  .menu-opcion {
+    padding: 11px 10px;
+    font-size: 14px;
+  }
+
+  .celda-cinta {
+    width: 40px;
+    height: 44px;
+    font-size: 17px;
+  }
+
+  .casilla input[type='checkbox'] {
+    width: 18px;
+    height: 18px;
+  }
+
+  /*
+    16px es el umbral por debajo del cual iOS hace zoom solo al enfocar un campo,
+    y después deja la página corrida de lugar. No es una preferencia estética.
+  */
+  .campo,
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  /* Las celdas de la tabla de transiciones se editan en línea: ahí el campo no
+     puede crecer, así que la tabla entera se desplaza en horizontal. */
+  .tabla .campo {
+    font-size: 15px;
+  }
+
+  /* Sin esto, mantener apretado un estado abre el menú del navegador en vez del
+     menú contextual propio. */
+  .lienzo {
+    -webkit-touch-callout: none;
+  }
+}
+
+/* La tabla nunca empuja el ancho de la página: se desplaza dentro de su caja. */
+.tabla-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Zoom del lienzo, para pantallas sin rueda de mouse. */
+.zoom-lienzo {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--papel-alto);
+  border: 1px solid var(--linea);
+  border-radius: var(--r);
+  padding: 3px;
+  box-shadow: 0 1px 3px rgb(var(--sombra) / 0.1);
+}
+
+.zoom-lienzo button {
+  border: 0;
+  background: none;
+  color: var(--tinta-suave);
+  cursor: pointer;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-chico);
+  font-size: 17px;
+  line-height: 1;
+  display: grid;
+  place-items: center;
+}
+
+.zoom-lienzo button:hover {
+  background: var(--papel);
+  color: var(--tinta);
+}
+
+@media (pointer: coarse) {
+  .zoom-lienzo button {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+
+/* Las ayudas nombran el gesto real de cada dispositivo: no existe el clic
+   derecho en una pantalla táctil, ni la pulsación larga con un mouse. */
+.solo-tactil {
+  display: none;
+}
+
+@media (pointer: coarse) {
+  .solo-puntero {
+    display: none;
+  }
+  .solo-tactil {
+    display: inline;
+  }
+  .pista {
+    font-size: 11px;
+    max-width: 62%;
+  }
 }

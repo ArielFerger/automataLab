@@ -110,23 +110,44 @@ export function Canvas(props: Props) {
   // Encuadrar cuando entra un autómata distinto (al cargarlo, o al convertir uno).
   const firmaEstados = automata.estados.map((e) => e.id).join(',')
   const firmaPrevia = useRef('')
+  const debeEncuadrar = useRef(true)
   useEffect(() => {
-    if (firmaPrevia.current === firmaEstados) return
     // Hasta que el lienzo no esté medido no se puede encuadrar; se reintenta
     // cuando el ResizeObserver informe el tamaño real.
     const caja = cajaRef.current
     if (!caja || caja.clientWidth < 80 || caja.clientHeight < 80) return
 
-    const previos = new Set(firmaPrevia.current.split(',').filter(Boolean))
-    const ahora = firmaEstados.split(',').filter(Boolean)
-    const compartidos = ahora.filter((id) => previos.has(id)).length
-    firmaPrevia.current = firmaEstados
-    if (compartidos > 0) return
-    // Si no queda ningún estado en común es otro autómata, así que se reencuadra.
-    // Se espera un cuadro: en el primer render la maqueta todavía se está
-    // acomodando y medir ahí da una escala equivocada.
-    const cuadro = requestAnimationFrame(() => encuadrar())
-    return () => cancelAnimationFrame(cuadro)
+    if (firmaPrevia.current !== firmaEstados) {
+      const previos = new Set(firmaPrevia.current.split(',').filter(Boolean))
+      const ahora = firmaEstados.split(',').filter(Boolean)
+      const compartidos = ahora.filter((id) => previos.has(id)).length
+      firmaPrevia.current = firmaEstados
+      // Si no queda ningún estado en común es otro autómata: hay que reencuadrar.
+      if (compartidos === 0) debeEncuadrar.current = true
+    }
+    if (!debeEncuadrar.current) return
+    debeEncuadrar.current = false
+
+    // Se difiere un turno para que la maqueta termine de acomodarse: medir en
+    // pleno render daba una escala equivocada.
+    //
+    // Va con setTimeout y no con requestAnimationFrame porque este último no
+    // corre en pestañas ocultas. Con rAF, abrir la app en una pestaña de fondo
+    // —al hacer clic con el botón del medio en un link compartido, por ejemplo—
+    // dejaba el autómata sin encuadrar, y no se recuperaba nunca: al volver a la
+    // pestaña el efecto ya no se vuelve a disparar.
+    let corrio = false
+    const t = setTimeout(() => {
+      corrio = true
+      encuadrar()
+    }, 0)
+    return () => {
+      clearTimeout(t)
+      // Si se canceló antes de correr, se vuelve a pedir el encuadre. En modo
+      // estricto React monta el efecto dos veces, y sin esto la cancelación de
+      // la primera pasada dejaba el autómata sin encuadrar para siempre.
+      if (!corrio) debeEncuadrar.current = true
+    }
   }, [firmaEstados, tam.ancho, tam.alto, encuadrar])
 
   const manojos = useMemo(() => agruparTransiciones(automata), [automata])
@@ -182,7 +203,40 @@ export function Canvas(props: Props) {
     onSeleccion(id)
   }
 
+  /**
+   * Pulsación larga: el equivalente táctil del clic derecho.
+   *
+   * En un teléfono no hay botón secundario, así que mantener apretado medio
+   * segundo sobre un estado o una flecha abre el mismo menú. Se cancela si el
+   * dedo se mueve, para no robarle el gesto al arrastre.
+   */
+  const pulsacion = useRef<{ temporizador: number; x: number; y: number } | null>(null)
+
+  function empezarPulsacionLarga(ev: React.PointerEvent, abrir: (ev: React.PointerEvent) => void) {
+    if (ev.pointerType !== 'touch') return
+    const copia = { ...ev, clientX: ev.clientX, clientY: ev.clientY } as React.PointerEvent
+    cancelarPulsacionLarga()
+    pulsacion.current = {
+      x: ev.clientX,
+      y: ev.clientY,
+      temporizador: window.setTimeout(() => {
+        pulsacion.current = null
+        setArrastre(null)
+        setPaneo(null)
+        abrir(copia)
+      }, 500),
+    }
+  }
+
+  function cancelarPulsacionLarga() {
+    if (pulsacion.current) {
+      clearTimeout(pulsacion.current.temporizador)
+      pulsacion.current = null
+    }
+  }
+
   function bajaEstado(ev: React.PointerEvent, id: string) {
+    empezarPulsacionLarga(ev, (e) => menuDeEstado(e as unknown as React.MouseEvent, id))
     if (herramienta !== 'mover') return
     ev.stopPropagation()
     const e = automata.estados.find((s) => s.id === id)
@@ -193,12 +247,18 @@ export function Canvas(props: Props) {
   }
 
   function bajaFondo(ev: React.PointerEvent) {
+    empezarPulsacionLarga(ev, (e) => menuDeFondo(e as unknown as React.MouseEvent))
     if (herramienta !== 'mover') return
     setPaneo({ cx: ev.clientX, cy: ev.clientY, vx: vista.x, vy: vista.y })
     ;(ev.currentTarget as Element).setPointerCapture?.(ev.pointerId)
   }
 
   function mueveLienzo(ev: React.PointerEvent) {
+    // Un desplazamiento chico es temblor del dedo; a partir de ahí es arrastre.
+    if (pulsacion.current) {
+      const d = Math.hypot(ev.clientX - pulsacion.current.x, ev.clientY - pulsacion.current.y)
+      if (d > 10) cancelarPulsacionLarga()
+    }
     if (arrastre) {
       const p = aMundo(ev)
       const r = clonar(automata)
@@ -220,6 +280,7 @@ export function Canvas(props: Props) {
   }
 
   function sueltaLienzo() {
+    cancelarPulsacionLarga()
     setArrastre(null)
     setPaneo(null)
   }
@@ -231,6 +292,18 @@ export function Canvas(props: Props) {
     const p = aMundo(ev)
     // Zoom anclado al puntero: el punto bajo el cursor no se mueve.
     setVista({ x: p.x - (p.x - vista.x) * (vista.escala / nueva), y: p.y - (p.y - vista.y) * (vista.escala / nueva), escala: nueva })
+  }
+
+  /** Zoom desde los botones: mantiene fijo el centro de lo que se está viendo. */
+  function aplicarZoom(factor: number) {
+    const caja = cajaRef.current
+    if (!caja) return
+    setVista((v) => {
+      const nueva = Math.min(2.6, Math.max(0.28, v.escala * factor))
+      const cx = v.x + caja.clientWidth / v.escala / 2
+      const cy = v.y + caja.clientHeight / v.escala / 2
+      return { x: cx - caja.clientWidth / nueva / 2, y: cy - caja.clientHeight / nueva / 2, escala: nueva }
+    })
   }
 
   function confirmarSimbolos() {
@@ -455,6 +528,7 @@ export function Canvas(props: Props) {
               if (herramienta === 'borrar') borrarManojo(m)
             }}
             onMenu={(ev) => menuDeArco(ev, m)}
+            onPulsacion={(ev) => empezarPulsacionLarga(ev, (e) => menuDeArco(e as unknown as React.MouseEvent, m))}
           />
         ))}
 
@@ -500,6 +574,15 @@ export function Canvas(props: Props) {
           )
         })}
       </svg>
+
+      <div className="zoom-lienzo" role="group" aria-label="Zoom del lienzo">
+        <button onClick={() => aplicarZoom(1.25)} title="Acercar" aria-label="Acercar">
+          +
+        </button>
+        <button onClick={() => aplicarZoom(1 / 1.25)} title="Alejar" aria-label="Alejar">
+          −
+        </button>
+      </div>
 
       <div className="herramientas" role="toolbar" aria-label="Herramientas del lienzo">
         {HERRAMIENTAS.map((h) => (
@@ -575,7 +658,9 @@ export function Canvas(props: Props) {
       )}
 
       <p className="pista">
-        {origen ? 'Ahora elegí el estado de destino.' : ayuda} Clic derecho para más opciones.
+        {origen ? 'Ahora elegí el estado de destino.' : ayuda}{' '}
+        <span className="solo-puntero">Clic derecho para más opciones.</span>
+        <span className="solo-tactil">Mantené apretado para más opciones.</span>
       </p>
     </div>
   )
@@ -594,9 +679,10 @@ interface ArcoProps {
   onSalir: () => void
   onClic: (ev: React.MouseEvent) => void
   onMenu: (ev: React.MouseEvent) => void
+  onPulsacion: (ev: React.PointerEvent) => void
 }
 
-function ArcoDibujado({ automata, manojo, resaltado, recorrido, onEntrar, onSalir, onClic, onMenu }: ArcoProps) {
+function ArcoDibujado({ automata, manojo, resaltado, recorrido, onEntrar, onSalir, onClic, onMenu, onPulsacion }: ArcoProps) {
   const a = automata.estados.find((e) => e.id === manojo.desde)
   const b = automata.estados.find((e) => e.id === manojo.hasta)
   if (!a || !b) return null
@@ -613,6 +699,7 @@ function ArcoDibujado({ automata, manojo, resaltado, recorrido, onEntrar, onSali
       onMouseLeave={onSalir}
       onClick={onClic}
       onContextMenu={onMenu}
+      onPointerDown={onPulsacion}
     >
       <path className="arco-golpe" d={arco.d} />
       <path className="arco-linea" d={arco.d} markerEnd={`url(#${punta})`} />

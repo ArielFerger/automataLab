@@ -64,6 +64,7 @@ export function TransitionTable({ automata, onCambio, foco, onFoco, activos = []
   }
 
   return (
+    <div className="tabla-scroll">
     <table className="tabla">
       <thead>
         <tr>
@@ -126,5 +127,6 @@ export function TransitionTable({ automata, onCambio, foco, onFoco, activos = []
         ))}
       </tbody>
     </table>
+    </div>
   )
 }

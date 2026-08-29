@@ -82,11 +82,13 @@ export default function App() {
               ))}
             </select>
           </label>
-          <button className="btn chico" onClick={historia.deshacer} disabled={!historia.puedeDeshacer}>
-            Deshacer
+          <button className="btn chico" onClick={historia.deshacer} disabled={!historia.puedeDeshacer} title="Deshacer">
+            <span className="icono-btn" aria-hidden="true">↶</span>
+            <span className="texto-btn">Deshacer</span>
           </button>
-          <button className="btn chico" onClick={historia.rehacer} disabled={!historia.puedeRehacer}>
-            Rehacer
+          <button className="btn chico" onClick={historia.rehacer} disabled={!historia.puedeRehacer} title="Rehacer">
+            <span className="icono-btn" aria-hidden="true">↷</span>
+            <span className="texto-btn">Rehacer</span>
           </button>
         </div>
       </header>

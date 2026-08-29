@@ -179,8 +179,7 @@ function AlfabetoEditor({ automata, onCambio }: { automata: Automata; onCambio: 
         </span>
       ))}
       <input
-        className="campo mono"
-        style={{ width: 66 }}
+        className="campo mono campo-corto"
         placeholder="+ símbolo"
         value={texto}
         onChange={(ev) => setTexto(ev.target.value)}
