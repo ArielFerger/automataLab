@@ -11,6 +11,7 @@ import {
   clonar,
   nuevoId,
   nuevoNombre,
+  reconectar,
   quitarEstado,
 } from '../core/automaton'
 import {
@@ -73,6 +74,12 @@ export function Canvas(props: Props) {
   const [vista, setVista] = useState({ x: 0, y: 0, escala: 1 })
   const [arrastre, setArrastre] = useState<{ id: string; dx: number; dy: number } | null>(null)
   const [curvando, setCurvando] = useState<Manojo | null>(null)
+  const [arcoElegido, setArcoElegido] = useState<ClaveArco | null>(null)
+  const [reenganche, setReenganche] = useState<{
+    manojo: Manojo
+    extremo: 'desde' | 'hasta'
+    punto: { x: number; y: number }
+  } | null>(null)
   const [moviendoTexto, setMoviendoTexto] = useState<{ id: string; dx: number; dy: number } | null>(null)
   const [editandoTexto, setEditandoTexto] = useState<{ id: string; contenido: string } | null>(null)
   const [paneo, setPaneo] = useState<{ cx: number; cy: number; vx: number; vy: number } | null>(null)
@@ -107,6 +114,7 @@ export function Canvas(props: Props) {
   useEffect(() => {
     setOrigen(null)
     setPendiente(null)
+    setArcoElegido(null)
   }, [herramienta])
 
   const encuadrar = useCallback(() => {
@@ -194,6 +202,31 @@ export function Canvas(props: Props) {
     onCambio(r)
   }
 
+  /** Estado cuyo círculo contiene ese punto, si hay alguno. */
+  function estadoEn(punto: { x: number; y: number }) {
+    return automata.estados.find((e) => Math.hypot(e.x - punto.x, e.y - punto.y) <= RADIO + 6)
+  }
+
+  /** Suelta la punta que se venía arrastrando sobre el estado que haya debajo. */
+  function soltarReenganche() {
+    if (!reenganche) return
+    const destino = estadoEn(reenganche.punto)
+    if (destino) {
+      const { manojo, extremo } = reenganche
+      const r = reconectar(automata, manojo.desde, manojo.hasta, extremo, destino.id)
+      if (r !== automata) {
+        onCambio(r)
+        setArcoElegido(
+          extremo === 'desde'
+            ? { desde: destino.id, hasta: manojo.hasta }
+            : { desde: manojo.desde, hasta: destino.id },
+        )
+      }
+    }
+    // Soltar en el vacío no hace nada: la flecha vuelve a donde estaba.
+    setReenganche(null)
+  }
+
   /** Traduce la posición del puntero a curvatura, según sea bucle o flecha. */
   function curvaturaEn(m: Manojo, punto: { x: number; y: number }): number {
     const a = automata.estados.find((e) => e.id === m.desde)
@@ -255,6 +288,7 @@ export function Canvas(props: Props) {
     }
     onSeleccion(null)
     setOrigen(null)
+    setArcoElegido(null)
   }
 
   /** Doble clic en el vacío crea un estado ahí, sin tener que cambiar de herramienta. */
@@ -342,6 +376,10 @@ export function Canvas(props: Props) {
       const d = Math.hypot(ev.clientX - pulsacion.current.x, ev.clientY - pulsacion.current.y)
       if (d > 10) cancelarPulsacionLarga()
     }
+    if (reenganche) {
+      setReenganche({ ...reenganche, punto: aMundo(ev) })
+      return
+    }
     if (curvando) {
       fijarCurva(curvando, curvaturaEn(curvando, aMundo(ev)))
       return
@@ -379,6 +417,7 @@ export function Canvas(props: Props) {
 
   function sueltaLienzo() {
     cancelarPulsacionLarga()
+    soltarReenganche()
     setArrastre(null)
     setPaneo(null)
     setCurvando(null)
@@ -647,7 +686,13 @@ export function Canvas(props: Props) {
             onSalir={() => onFoco(null)}
             onClic={(ev) => {
               ev.stopPropagation()
-              if (herramienta === 'borrar') borrarManojo(m)
+              if (herramienta === 'borrar') {
+                borrarManojo(m)
+                setArcoElegido(null)
+                return
+              }
+              setArcoElegido({ desde: m.desde, hasta: m.hasta })
+              onSeleccion(null)
             }}
             onMenu={(ev) => menuDeArco(ev, m)}
             onPulsacion={(ev) => {
@@ -659,8 +704,30 @@ export function Canvas(props: Props) {
               }
             }}
             curvable={herramienta === 'mover'}
+            elegido={!!arcoElegido && arcoElegido.desde === m.desde && arcoElegido.hasta === m.hasta}
+            onTomarPunta={(extremo, punto) => {
+              setArcoElegido({ desde: m.desde, hasta: m.hasta })
+              setReenganche({ manojo: m, extremo, punto })
+            }}
           />
         ))}
+
+        {reenganche &&
+          (() => {
+            // Mientras se arrastra la punta, una línea muestra a dónde iría, y
+            // el estado que hay debajo se marca como destino.
+            const fijo = automata.estados.find(
+              (e) => e.id === (reenganche.extremo === 'desde' ? reenganche.manojo.hasta : reenganche.manojo.desde),
+            )
+            const destino = estadoEn(reenganche.punto)
+            if (!fijo) return null
+            return (
+              <g className="reenganche">
+                <line x1={fijo.x} y1={fijo.y} x2={reenganche.punto.x} y2={reenganche.punto.y} />
+                {destino && <circle className="destino" cx={destino.x} cy={destino.y} r={RADIO + 6} />}
+              </g>
+            )
+          })()}
 
         {(automata.textos ?? []).map((t) => {
           const lineas = t.contenido.split('\n')
@@ -884,9 +951,12 @@ interface ArcoProps {
   onPulsacion: (ev: React.PointerEvent) => void
   /** con la herramienta Mover, la flecha se puede arrastrar para curvarla */
   curvable: boolean
+  /** true cuando la flecha está seleccionada y muestra sus tiradores */
+  elegido: boolean
+  onTomarPunta: (extremo: 'desde' | 'hasta', punto: { x: number; y: number }) => void
 }
 
-function ArcoDibujado({ automata, manojo, resaltado, recorrido, onEntrar, onSalir, onClic, onMenu, onPulsacion, curvable }: ArcoProps) {
+function ArcoDibujado({ automata, manojo, resaltado, recorrido, onEntrar, onSalir, onClic, onMenu, onPulsacion, curvable, elegido, onTomarPunta }: ArcoProps) {
   const a = automata.estados.find((e) => e.id === manojo.desde)
   const b = automata.estados.find((e) => e.id === manojo.hasta)
   if (!a || !b) return null
@@ -900,7 +970,11 @@ function ArcoDibujado({ automata, manojo, resaltado, recorrido, onEntrar, onSali
   return (
     <g
       className={
-        'arco' + (resaltado ? ' resaltado' : '') + (recorrido ? ' recorrido' : '') + (curvable ? ' curvable' : '')
+        'arco' +
+        (resaltado ? ' resaltado' : '') +
+        (recorrido ? ' recorrido' : '') +
+        (curvable ? ' curvable' : '') +
+        (elegido ? ' elegido' : '')
       }
       onMouseEnter={onEntrar}
       onMouseLeave={onSalir}
@@ -921,6 +995,33 @@ function ArcoDibujado({ automata, manojo, resaltado, recorrido, onEntrar, onSali
       <text className="arco-etiqueta" x={arco.etiqueta.x} y={arco.etiqueta.y + 4}>
         {texto}
       </text>
+
+      {elegido && (
+        <g className="tiradores">
+          {/* El del medio flexiona la curva; los de las puntas la reenganchan. */}
+          <circle className="tirador tirador-curva" cx={arco.vertice.x} cy={arco.vertice.y} r={6} />
+          <Punta punto={arco.inicio} onTomar={(p) => onTomarPunta('desde', p)} />
+          <Punta punto={arco.fin} onTomar={(p) => onTomarPunta('hasta', p)} />
+        </g>
+      )}
+    </g>
+  )
+}
+
+/** Tirador de una punta de la flecha: se arrastra hasta otro estado. */
+function Punta({ punto, onTomar }: { punto: { x: number; y: number }; onTomar: (p: { x: number; y: number }) => void }) {
+  return (
+    <g
+      className="tirador-punta"
+      onPointerDown={(ev) => {
+        ev.stopPropagation()
+        ;(ev.currentTarget as Element).setPointerCapture?.(ev.pointerId)
+        onTomar(punto)
+      }}
+    >
+      {/* Círculo invisible más grande, para poder agarrarlo con el dedo. */}
+      <circle className="tirador-golpe" cx={punto.x} cy={punto.y} r={14} />
+      <circle className="tirador" cx={punto.x} cy={punto.y} r={6} />
     </g>
   )
 }

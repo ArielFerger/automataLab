@@ -10,6 +10,7 @@ import {
   motivoNoAFD,
   mueve,
   quitarInalcanzables,
+  reconectar,
   quitarMuertos,
   vivos,
 } from '../src/core/automaton'
@@ -218,5 +219,82 @@ describe('autómatas a medio dibujar', () => {
     const vacio = { estados: [], alfabeto: ['a'], transiciones: [], inicial: '', finales: [] }
     expect(() => minimizar(vacio)).not.toThrow()
     expect(eliminacionDeEstados(vacio).expresion).toBe('∅')
+  })
+})
+
+describe('reenganchar una flecha a otro estado', () => {
+  function tres(): Automata {
+    return {
+      estados: [
+        { id: 'a', nombre: 'a', x: 0, y: 0 },
+        { id: 'b', nombre: 'b', x: 0, y: 0 },
+        { id: 'c', nombre: 'c', x: 0, y: 0 },
+      ],
+      alfabeto: ['0', '1'],
+      transiciones: [
+        { desde: 'a', hasta: 'b', simbolo: '0' },
+        { desde: 'a', hasta: 'b', simbolo: '1' },
+      ],
+      inicial: 'a',
+      finales: ['b'],
+    }
+  }
+
+  it('mueve el destino y se lleva todos los símbolos del manojo', () => {
+    const r = reconectar(tres(), 'a', 'b', 'hasta', 'c')
+    expect(r.transiciones).toEqual([
+      { desde: 'a', hasta: 'c', simbolo: '0' },
+      { desde: 'a', hasta: 'c', simbolo: '1' },
+    ])
+  })
+
+  it('mueve también el origen', () => {
+    const r = reconectar(tres(), 'a', 'b', 'desde', 'c')
+    expect(r.transiciones.every((t) => t.desde === 'c' && t.hasta === 'b')).toBe(true)
+  })
+
+  it('al caer sobre un manojo que ya existía, junta los símbolos sin repetir', () => {
+    const a = tres()
+    a.transiciones.push({ desde: 'a', hasta: 'c', simbolo: '0' })
+    const r = reconectar(a, 'a', 'b', 'hasta', 'c')
+    // El 0 ya estaba en a→c: queda uno solo, más el 1 que llegó.
+    expect(r.transiciones).toEqual([
+      { desde: 'a', hasta: 'c', simbolo: '0' },
+      { desde: 'a', hasta: 'c', simbolo: '1' },
+    ])
+  })
+
+  it('soltarla donde ya estaba, o sobre algo que no es un estado, no cambia nada', () => {
+    const a = tres()
+    expect(reconectar(a, 'a', 'b', 'hasta', 'b')).toBe(a)
+    expect(reconectar(a, 'a', 'b', 'hasta', 'inexistente')).toBe(a)
+  })
+
+  it('reenganchar a su propio origen deja un bucle', () => {
+    const r = reconectar(tres(), 'a', 'b', 'hasta', 'a')
+    expect(r.transiciones.every((t) => t.desde === 'a' && t.hasta === 'a')).toBe(true)
+  })
+
+  it('la curvatura elegida acompaña a la flecha', () => {
+    const a = tres()
+    a.curvas = { 'a>b': 40 }
+    const r = reconectar(a, 'a', 'b', 'hasta', 'c')
+    expect(r.curvas).toEqual({ 'a>c': 40 })
+  })
+
+  it('si el destino ya tenía curvatura propia, esa manda', () => {
+    const a = tres()
+    a.transiciones.push({ desde: 'a', hasta: 'c', simbolo: '0' })
+    a.curvas = { 'a>b': 40, 'a>c': -15 }
+    const r = reconectar(a, 'a', 'b', 'hasta', 'c')
+    expect(r.curvas).toEqual({ 'a>c': -15 })
+  })
+
+  it('no toca el lenguaje reconocido cuando el destino es equivalente', () => {
+    const a = tres()
+    const r = reconectar(a, 'a', 'b', 'hasta', 'c')
+    // b era final y c no: el lenguaje cambia, y eso se tiene que notar.
+    expect(acepta(a, '0')).toBe(true)
+    expect(acepta(r, '0')).toBe(false)
   })
 })

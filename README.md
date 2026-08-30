@@ -39,6 +39,11 @@ diagrama y al revés.
 puntero. Los bucles giran alrededor de su estado, para sacarlos de donde molesten. La curva elegida
 se guarda con el autómata; desde el menú de la flecha se vuelve a la automática.
 
+Al hacerle clic, la flecha queda seleccionada y aparecen sus tres tiradores: el del medio la flexiona
+y los de las puntas la reenganchan. Arrastrando una punta hasta otro estado, todas las transiciones
+de esa flecha cambian de origen o de destino; si en el lugar nuevo ya había flechas entre esos mismos
+estados, los símbolos se juntan en una sola en vez de duplicarse. Soltarla en el vacío no hace nada.
+
 **Cuadros de texto.** La herramienta Texto agrega anotaciones sueltas sobre el lienzo: el enunciado,
 el nombre de una parte del diagrama, lo que sea. Se arrastran, se editan con doble clic y salen en la
 imagen exportada. No forman parte del autómata: los algoritmos las ignoran.

@@ -329,6 +329,57 @@ export function quitarTransicion(a: Automata, desde: string, hasta: string, simb
   return r
 }
 
+/**
+ * Cambia una punta de un manojo de flechas a otro estado.
+ *
+ * `extremo` dice cuál de las dos puntas se movió: 'desde' cambia el origen,
+ * 'hasta' el destino. Si en el lugar nuevo ya había flechas entre esos mismos
+ * estados, los símbolos se juntan en un solo manojo en vez de duplicarse.
+ */
+export function reconectar(
+  a: Automata,
+  desde: string,
+  hasta: string,
+  extremo: 'desde' | 'hasta',
+  nuevo: string,
+): Automata {
+  const anterior = extremo === 'desde' ? desde : hasta
+  if (anterior === nuevo) return a
+  if (!a.estados.some((e) => e.id === nuevo)) return a
+
+  const r = clonar(a)
+  const nuevoDesde = extremo === 'desde' ? nuevo : desde
+  const nuevoHasta = extremo === 'hasta' ? nuevo : hasta
+
+  const vistas = new Set<string>()
+  const salida: Transicion[] = []
+  for (const t of r.transiciones) {
+    const mudada =
+      t.desde === desde && t.hasta === hasta ? { desde: nuevoDesde, hasta: nuevoHasta, simbolo: t.simbolo } : t
+    const clave = mudada.desde + '|' + mudada.simbolo + '|' + mudada.hasta
+    if (vistas.has(clave)) continue
+    vistas.add(clave)
+    salida.push(mudada)
+  }
+  r.transiciones = salida
+
+  // La curvatura elegida acompaña a la flecha, salvo que en el destino ya
+  // hubiera una: esa manda, porque es la del manojo con el que se fusiona.
+  if (r.curvas) {
+    const curvas = { ...r.curvas }
+    const vieja = claveArco(desde, hasta)
+    const nueva = claveArco(nuevoDesde, nuevoHasta)
+    if (curvas[vieja] !== undefined) {
+      if (curvas[nueva] === undefined) curvas[nueva] = curvas[vieja]
+      delete curvas[vieja]
+    }
+    if (Object.keys(curvas).length > 0) r.curvas = curvas
+    else delete r.curvas
+  }
+
+  return r
+}
+
 /** Renombra los estados a q0, q1, … respetando el orden actual. */
 export function renumerar(a: Automata): Automata {
   const r = clonar(a)

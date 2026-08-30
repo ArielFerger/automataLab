@@ -78,6 +78,12 @@ export interface Punto {
 export interface Arco {
   d: string
   etiqueta: Punto
+  /** dónde nace la flecha, sobre el borde del estado de origen */
+  inicio: Punto
+  /** dónde termina la punta, sobre el borde del estado de destino */
+  fin: Punto
+  /** el punto más alejado de la recta: de ahí se agarra para curvarla */
+  vertice: Punto
 }
 
 function bezierCuadratica(p0: Punto, c: Punto, p2: Punto): Punto {
@@ -113,6 +119,9 @@ export function arcoBucle(centro: Punto, angulo: number = ANGULO_BUCLE): Arco {
   return {
     d: `M ${p0.x} ${p0.y} C ${c1.x} ${c1.y} ${c2.x} ${c2.y} ${p3.x} ${p3.y}`,
     etiqueta: { x: medio.x + dx * 10, y: medio.y + dy * 10 },
+    inicio: p0,
+    fin: p3,
+    vertice: medio,
   }
 }
 
@@ -138,6 +147,9 @@ export function arcoEntre(a: Punto, b: Punto, curvatura: number): Arco {
     return {
       d: `M ${inicio.x} ${inicio.y} L ${fin.x} ${fin.y}`,
       etiqueta: { x: medio.x + px * 12, y: medio.y + py * 12 },
+      inicio,
+      fin,
+      vertice: medio,
     }
   }
 
@@ -157,6 +169,9 @@ export function arcoEntre(a: Punto, b: Punto, curvatura: number): Arco {
   return {
     d: `M ${i2.x} ${i2.y} Q ${control.x} ${control.y} ${f2.x} ${f2.y}`,
     etiqueta: { x: medio.x + px * lado, y: medio.y + py * lado },
+    inicio: i2,
+    fin: f2,
+    vertice: medio,
   }
 }
 

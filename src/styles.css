@@ -2058,3 +2058,51 @@ textarea.campo {
   width: 240px;
   resize: none;
 }
+
+/* ------------------------------------------- tiradores de las flechas */
+
+.tirador {
+  fill: var(--papel-alto);
+  stroke: var(--azul);
+  stroke-width: 2;
+}
+
+.tirador-curva {
+  cursor: grab;
+}
+
+.tirador-golpe {
+  fill: transparent;
+}
+
+.tirador-punta {
+  cursor: grab;
+}
+
+.tirador-punta:hover .tirador,
+.tirador-punta:active .tirador {
+  fill: var(--azul);
+}
+
+.arco.elegido .arco-linea {
+  stroke: var(--azul);
+  stroke-width: 2.4;
+}
+
+.arco.elegido .arco-etiqueta {
+  fill: var(--azul);
+  font-weight: 700;
+}
+
+/* Mientras se arrastra una punta: la línea guía y el estado que la recibiría. */
+.reenganche line {
+  stroke: var(--azul);
+  stroke-width: 2;
+  stroke-dasharray: 6 4;
+}
+
+.reenganche .destino {
+  fill: none;
+  stroke: var(--azul);
+  stroke-width: 2.5;
+}
