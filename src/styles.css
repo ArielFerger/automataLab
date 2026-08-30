@@ -2003,6 +2003,58 @@ textarea.campo {
   }
   .pista {
     font-size: 11px;
-    max-width: 62%;
+    max-width: 60%;
   }
+
+  /* Con seis herramientas ya no entran en una fila: se envuelven para que
+     ninguna quede fuera de alcance. */
+  .herramientas {
+    flex-wrap: wrap;
+    max-width: calc(100% - 24px);
+  }
+}
+
+/* ------------------------------------------------ flechas y textos a mano */
+
+/* Con la herramienta Mover, la flecha se arrastra para curvarla. */
+.arco.curvable .arco-golpe {
+  cursor: grab;
+}
+
+.arco.curvable:active .arco-golpe {
+  cursor: grabbing;
+}
+
+.texto-lienzo {
+  cursor: grab;
+}
+
+.texto-caja {
+  fill: color-mix(in srgb, var(--papel-alto) 82%, transparent);
+  stroke: var(--linea);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+}
+
+.texto-lienzo:hover .texto-caja,
+.texto-lienzo.editando .texto-caja {
+  stroke: var(--azul);
+  stroke-dasharray: none;
+}
+
+.texto-contenido {
+  font-family: var(--display);
+  font-size: 13px;
+  fill: var(--tinta);
+  pointer-events: none;
+  white-space: pre;
+}
+
+.entrada-texto {
+  align-items: flex-start;
+}
+
+.entrada-texto .campo {
+  width: 240px;
+  resize: none;
 }

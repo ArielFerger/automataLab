@@ -48,7 +48,7 @@ export function Diagrama({ automata, alto = 220, resaltados = [] }: Props) {
         const a = automata.estados.find((e) => e.id === m.desde)
         const b = automata.estados.find((e) => e.id === m.hasta)
         if (!a || !b) return null
-        const arco = m.desde === m.hasta ? arcoBucle(a) : arcoEntre(a, b, m.curvatura)
+        const arco = m.desde === m.hasta ? arcoBucle(a, m.curvatura) : arcoEntre(a, b, m.curvatura)
         const texto = m.simbolos.map((s) => (s === EPSILON ? EPSILON_LABEL : s)).join(', ')
         return (
           <g className="arco" key={m.desde + '>' + m.hasta}>
@@ -67,6 +67,12 @@ export function Diagrama({ automata, alto = 220, resaltados = [] }: Props) {
           </g>
         )
       })}
+
+      {(automata.textos ?? []).map((t) => (
+        <text key={t.id} className="texto-contenido" x={t.x} y={t.y + 9}>
+          {t.contenido.split('\n')[0]}
+        </text>
+      ))}
 
       {automata.estados.map((e) => {
         const marcado = resaltados.includes(e.id)

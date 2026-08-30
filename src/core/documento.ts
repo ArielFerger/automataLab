@@ -6,7 +6,7 @@
  * y con los datos que lo acompañan.
  */
 
-import { type Automata, automataVacio } from './automaton'
+import { type Automata, type Texto, automataVacio } from './automaton'
 
 export const VERSION_FORMATO = 1
 
@@ -100,7 +100,36 @@ function validarAutomata(crudo: unknown): Automata {
     })),
     inicial: String(a.inicial ?? ''),
     finales: Array.isArray(a.finales) ? (a.finales as string[]).map(String) : [],
+    ...(a.curvas && typeof a.curvas === 'object'
+      ? { curvas: validarCurvas(a.curvas as Record<string, unknown>) }
+      : {}),
+    ...(Array.isArray(a.textos) ? { textos: validarTextos(a.textos) } : {}),
   }
+}
+
+/**
+ * Solo entran claves con un número finito: un valor raro rompería el dibujo.
+ *
+ * Se exige que ya sea un número, sin convertir. Number(null) da 0, que es finito,
+ * así que un null se colaría como una curvatura válida de cero.
+ */
+function validarCurvas(crudo: Record<string, unknown>): Record<string, number> {
+  const out: Record<string, number> = {}
+  for (const [clave, valor] of Object.entries(crudo)) {
+    if (typeof valor === 'number' && Number.isFinite(valor)) out[clave] = valor
+  }
+  return out
+}
+
+function validarTextos(crudo: unknown[]): Texto[] {
+  return crudo
+    .filter((t): t is Record<string, unknown> => !!t && typeof t === 'object')
+    .map((t, i) => ({
+      id: String(t.id ?? 'txt' + i),
+      contenido: String(t.contenido ?? ''),
+      x: Number(t.x) || 0,
+      y: Number(t.y) || 0,
+    }))
 }
 
 /** Descarga un contenido como archivo, del lado del navegador. */

@@ -35,6 +35,14 @@ un estado, sobre una flecha o sobre el lienzo abre el menú con todo lo que se p
 tabla de transiciones está al lado y se edita también; señalar una celda resalta su flecha en el
 diagrama y al revés.
 
+**Flechas a gusto.** Con la herramienta Mover, arrastrar una flecha la curva, y el vértice sigue al
+puntero. Los bucles giran alrededor de su estado, para sacarlos de donde molesten. La curva elegida
+se guarda con el autómata; desde el menú de la flecha se vuelve a la automática.
+
+**Cuadros de texto.** La herramienta Texto agrega anotaciones sueltas sobre el lienzo: el enunciado,
+el nombre de una parte del diagrama, lo que sea. Se arrastran, se editan con doble clic y salen en la
+imagen exportada. No forman parte del autómata: los algoritmos las ignoran.
+
 **Recorrido de una cadena.** Abajo del lienzo está la cinta de entrada con el control que avanza
 símbolo por símbolo, como lo describe la teoría. Se puede ir paso a paso con `Leer símbolo`, volver
 atrás, o darle `Reproducir` y verlo solo. En cada paso se resalta el conjunto de estados activos y

@@ -52,7 +52,7 @@ function diagrama(a: Automata): { svg: string; ancho: number; alto: number } {
     const desde = a.estados.find((e) => e.id === m.desde)
     const hasta = a.estados.find((e) => e.id === m.hasta)
     if (!desde || !hasta) continue
-    const arco = m.desde === m.hasta ? arcoBucle(desde) : arcoEntre(desde, hasta, m.curvatura)
+    const arco = m.desde === m.hasta ? arcoBucle(desde, m.curvatura) : arcoEntre(desde, hasta, m.curvatura)
     const texto = m.simbolos.map((s) => (s === EPSILON ? EPSILON_LABEL : s)).join(', ')
     const ancho = texto.length * 7.2 + 8
     partes.push(
@@ -60,6 +60,15 @@ function diagrama(a: Automata): { svg: string; ancho: number; alto: number } {
       `<rect x="${arco.etiqueta.x - ancho / 2}" y="${arco.etiqueta.y - 9}" width="${ancho}" height="16" rx="3" fill="${FONDO}"/>`,
       `<text x="${arco.etiqueta.x}" y="${arco.etiqueta.y + 4}" font-family="${MONO}" font-size="12" fill="${TINTA}" text-anchor="middle">${escapar(texto)}</text>`,
     )
+  }
+
+  // Las anotaciones van debajo de los estados, para que nunca los tapen.
+  for (const t of a.textos ?? []) {
+    t.contenido.split('\n').forEach((linea, i) => {
+      partes.push(
+        `<text x="${t.x}" y="${t.y + 9 + i * 17}" font-family="${SANS}" font-size="13" fill="${TINTA}">${escapar(linea)}</text>`,
+      )
+    })
   }
 
   for (const e of a.estados) {

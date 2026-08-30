@@ -6,18 +6,29 @@ import {
   agregarEstado,
   agregarTransicion,
   alternarFinal,
+  claveArco,
   esSimboloEpsilon,
   clonar,
   nuevoId,
   nuevoNombre,
   quitarEstado,
 } from '../core/automaton'
-import { type Manojo, RADIO, RADIO_FINAL, agruparTransiciones, arcoBucle, arcoEntre, flechaInicial } from '../core/geometria'
+import {
+  type Manojo,
+  RADIO,
+  RADIO_FINAL,
+  agruparTransiciones,
+  anguloHacia,
+  arcoBucle,
+  arcoEntre,
+  curvaturaHacia,
+  flechaInicial,
+} from '../core/geometria'
 import { autoDisponer, limites } from '../core/layout'
 import { type Foco, arcoEnFoco } from './foco'
 import { MenuContextual, type OpcionMenu } from './MenuContextual'
 
-export type Herramienta = 'mover' | 'estado' | 'transicion' | 'borrar'
+export type Herramienta = 'mover' | 'estado' | 'transicion' | 'texto' | 'borrar'
 
 /** Par (origen, destino) usado para sincronizar el diagrama con la tabla. */
 export interface ClaveArco {
@@ -40,9 +51,14 @@ interface Props {
 }
 
 const HERRAMIENTAS: { id: Herramienta; texto: string; ayuda: string }[] = [
-  { id: 'mover', texto: 'Mover', ayuda: 'Arrastrá los estados. Arrastrá el fondo para desplazar la vista.' },
+  {
+    id: 'mover',
+    texto: 'Mover',
+    ayuda: 'Arrastrá los estados, las flechas para curvarlas, y el fondo para mover la vista.',
+  },
   { id: 'estado', texto: 'Estado', ayuda: 'Hacé clic en el lienzo para crear un estado.' },
   { id: 'transicion', texto: 'Transición', ayuda: 'Clic en el estado de origen y después en el de destino.' },
+  { id: 'texto', texto: 'Texto', ayuda: 'Hacé clic donde quieras escribir una aclaración.' },
   { id: 'borrar', texto: 'Borrar', ayuda: 'Clic en un estado o en una transición para eliminarla.' },
 ]
 
@@ -56,6 +72,9 @@ export function Canvas(props: Props) {
   const [tam, setTam] = useState({ ancho: 900, alto: 600 })
   const [vista, setVista] = useState({ x: 0, y: 0, escala: 1 })
   const [arrastre, setArrastre] = useState<{ id: string; dx: number; dy: number } | null>(null)
+  const [curvando, setCurvando] = useState<Manojo | null>(null)
+  const [moviendoTexto, setMoviendoTexto] = useState<{ id: string; dx: number; dy: number } | null>(null)
+  const [editandoTexto, setEditandoTexto] = useState<{ id: string; contenido: string } | null>(null)
   const [paneo, setPaneo] = useState<{ cx: number; cy: number; vx: number; vy: number } | null>(null)
   const [origen, setOrigen] = useState<string | null>(null)
   const [pendiente, setPendiente] = useState<ClaveArco | null>(null)
@@ -161,6 +180,65 @@ export function Canvas(props: Props) {
     }
   }
 
+  // ------------------------------------------------- curvatura de las flechas
+
+  /** Fija la curvatura de un manojo. Con `null` vuelve a la curva automática. */
+  function fijarCurva(m: Manojo, valor: number | null) {
+    const r = clonar(automata)
+    const curvas = { ...(r.curvas ?? {}) }
+    const clave = claveArco(m.desde, m.hasta)
+    if (valor === null) delete curvas[clave]
+    else curvas[clave] = Math.round(valor * 10) / 10
+    if (Object.keys(curvas).length > 0) r.curvas = curvas
+    else delete r.curvas
+    onCambio(r)
+  }
+
+  /** Traduce la posición del puntero a curvatura, según sea bucle o flecha. */
+  function curvaturaEn(m: Manojo, punto: { x: number; y: number }): number {
+    const a = automata.estados.find((e) => e.id === m.desde)
+    const b = automata.estados.find((e) => e.id === m.hasta)
+    if (!a || !b) return m.curvatura
+    if (m.desde === m.hasta) return anguloHacia(a, punto)
+    // Se limita para que la flecha no se dispare lejos de un tirón.
+    return Math.max(-600, Math.min(600, curvaturaHacia(a, b, punto)))
+  }
+
+  // ------------------------------------------------------ cuadros de texto
+
+  function agregarTexto(x: number, y: number) {
+    const r = clonar(automata)
+    const textos = [...(r.textos ?? [])]
+    let n = 0
+    const usados = new Set(textos.map((t) => t.id))
+    while (usados.has('txt' + n)) n++
+    const id = 'txt' + n
+    textos.push({ id, contenido: '', x, y })
+    r.textos = textos
+    onCambio(r)
+    setEditandoTexto({ id, contenido: '' })
+  }
+
+  function guardarTexto(id: string, contenido: string) {
+    const r = clonar(automata)
+    const limpio = contenido.trim()
+    // Un cuadro vacío no aporta nada y estorba: se descarta.
+    const textos = (r.textos ?? []).flatMap((t) =>
+      t.id !== id ? [t] : limpio ? [{ ...t, contenido: limpio }] : [],
+    )
+    if (textos.length > 0) r.textos = textos
+    else delete r.textos
+    onCambio(r)
+  }
+
+  function quitarTexto(id: string) {
+    const r = clonar(automata)
+    const textos = (r.textos ?? []).filter((t) => t.id !== id)
+    if (textos.length > 0) r.textos = textos
+    else delete r.textos
+    onCambio(r)
+  }
+
   function clicFondo(ev: React.MouseEvent) {
     if (pendiente) return
     if (herramienta === 'estado') {
@@ -168,6 +246,11 @@ export function Canvas(props: Props) {
       const r = agregarEstado(automata, p.x, p.y)
       onCambio(r.automata)
       onSeleccion(r.id)
+      return
+    }
+    if (herramienta === 'texto') {
+      const p = aMundo(ev)
+      agregarTexto(p.x, p.y)
       return
     }
     onSeleccion(null)
@@ -259,6 +342,21 @@ export function Canvas(props: Props) {
       const d = Math.hypot(ev.clientX - pulsacion.current.x, ev.clientY - pulsacion.current.y)
       if (d > 10) cancelarPulsacionLarga()
     }
+    if (curvando) {
+      fijarCurva(curvando, curvaturaEn(curvando, aMundo(ev)))
+      return
+    }
+    if (moviendoTexto) {
+      const p = aMundo(ev)
+      const r = clonar(automata)
+      const t = (r.textos ?? []).find((x) => x.id === moviendoTexto.id)
+      if (t) {
+        t.x = Math.round(p.x - moviendoTexto.dx)
+        t.y = Math.round(p.y - moviendoTexto.dy)
+        onCambio(r)
+      }
+      return
+    }
     if (arrastre) {
       const p = aMundo(ev)
       const r = clonar(automata)
@@ -283,6 +381,8 @@ export function Canvas(props: Props) {
     cancelarPulsacionLarga()
     setArrastre(null)
     setPaneo(null)
+    setCurvando(null)
+    setMoviendoTexto(null)
   }
 
   function rueda(ev: React.WheelEvent) {
@@ -440,7 +540,28 @@ export function Canvas(props: Props) {
             onCambio(r)
           },
         },
+        {
+          texto: m.aMano ? 'Volver a la curva automática' : 'La curva ya es automática',
+          separar: true,
+          accion: m.aMano ? () => fijarCurva(m, null) : undefined,
+        },
         { texto: 'Eliminar estas transiciones', separar: true, peligrosa: true, accion: () => borrarManojo(m) },
+      ],
+    })
+  }
+
+  function menuDeTexto(ev: React.MouseEvent, id: string) {
+    ev.preventDefault()
+    ev.stopPropagation()
+    const t = (automata.textos ?? []).find((x) => x.id === id)
+    if (!t) return
+    setMenu({
+      x: ev.clientX,
+      y: ev.clientY,
+      titulo: 'Texto',
+      opciones: [
+        { texto: 'Editar…', accion: () => setEditandoTexto({ id, contenido: t.contenido }) },
+        { texto: 'Eliminar', separar: true, peligrosa: true, accion: () => quitarTexto(id) },
       ],
     })
   }
@@ -461,6 +582,7 @@ export function Canvas(props: Props) {
             onSeleccion(r.id)
           },
         },
+        { texto: 'Escribir un texto acá', accion: () => agregarTexto(p.x, p.y) },
         { texto: 'Acomodar los estados', separar: true, accion: () => onCambio(autoDisponer(automata)) },
         { texto: 'Encuadrar la vista', accion: encuadrar },
         { texto: 'Zoom al 100 %', accion: () => setVista((v) => ({ ...v, escala: 1 })) },
@@ -528,9 +650,53 @@ export function Canvas(props: Props) {
               if (herramienta === 'borrar') borrarManojo(m)
             }}
             onMenu={(ev) => menuDeArco(ev, m)}
-            onPulsacion={(ev) => empezarPulsacionLarga(ev, (e) => menuDeArco(e as unknown as React.MouseEvent, m))}
+            onPulsacion={(ev) => {
+              empezarPulsacionLarga(ev, (e) => menuDeArco(e as unknown as React.MouseEvent, m))
+              if (herramienta === 'mover') {
+                ev.stopPropagation()
+                setCurvando(m)
+                ;(ev.currentTarget as Element).setPointerCapture?.(ev.pointerId)
+              }
+            }}
+            curvable={herramienta === 'mover'}
           />
         ))}
+
+        {(automata.textos ?? []).map((t) => {
+          const lineas = t.contenido.split('\n')
+          const ancho = Math.max(...lineas.map((l) => l.length), 1) * 7.4 + 16
+          const alto = lineas.length * 17 + 12
+          return (
+            <g
+              key={t.id}
+              className={'texto-lienzo' + (editandoTexto?.id === t.id ? ' editando' : '')}
+              onPointerDown={(ev) => {
+                if (herramienta !== 'mover') return
+                ev.stopPropagation()
+                const p = aMundo(ev)
+                setMoviendoTexto({ id: t.id, dx: p.x - t.x, dy: p.y - t.y })
+                ;(ev.currentTarget as Element).setPointerCapture?.(ev.pointerId)
+                empezarPulsacionLarga(ev, (e) => menuDeTexto(e as unknown as React.MouseEvent, t.id))
+              }}
+              onClick={(ev) => {
+                ev.stopPropagation()
+                if (herramienta === 'borrar') quitarTexto(t.id)
+              }}
+              onDoubleClick={(ev) => {
+                ev.stopPropagation()
+                setEditandoTexto({ id: t.id, contenido: t.contenido })
+              }}
+              onContextMenu={(ev) => menuDeTexto(ev, t.id)}
+            >
+              <rect className="texto-caja" x={t.x - 8} y={t.y - 8} width={ancho} height={alto} rx={4} />
+              {lineas.map((linea, i) => (
+                <text key={i} className="texto-contenido" x={t.x} y={t.y + 9 + i * 17}>
+                  {linea}
+                </text>
+              ))}
+            </g>
+          )
+        })}
 
         {automata.estados.map((e) => {
           const activo = activos.includes(e.id)
@@ -653,6 +819,42 @@ export function Canvas(props: Props) {
         </div>
       )}
 
+      {editandoTexto && (
+        <div className="entrada-simbolo entrada-texto">
+          <label htmlFor="texto-lienzo">Texto</label>
+          <textarea
+            id="texto-lienzo"
+            autoFocus
+            className="campo"
+            rows={2}
+            value={editandoTexto.contenido}
+            placeholder="Una aclaración, un título…"
+            onChange={(ev) => setEditandoTexto({ ...editandoTexto, contenido: ev.target.value })}
+            onKeyDown={(ev) => {
+              // Enter confirma; Mayúsculas+Enter deja escribir otro renglón.
+              if (ev.key === 'Enter' && !ev.shiftKey) {
+                ev.preventDefault()
+                guardarTexto(editandoTexto.id, editandoTexto.contenido)
+                setEditandoTexto(null)
+              }
+              if (ev.key === 'Escape') {
+                guardarTexto(editandoTexto.id, editandoTexto.contenido)
+                setEditandoTexto(null)
+              }
+            }}
+          />
+          <button
+            className="btn primario chico"
+            onClick={() => {
+              guardarTexto(editandoTexto.id, editandoTexto.contenido)
+              setEditandoTexto(null)
+            }}
+          >
+            Listo
+          </button>
+        </div>
+      )}
+
       {menu && (
         <MenuContextual x={menu.x} y={menu.y} titulo={menu.titulo} opciones={menu.opciones} onCerrar={() => setMenu(null)} />
       )}
@@ -680,21 +882,26 @@ interface ArcoProps {
   onClic: (ev: React.MouseEvent) => void
   onMenu: (ev: React.MouseEvent) => void
   onPulsacion: (ev: React.PointerEvent) => void
+  /** con la herramienta Mover, la flecha se puede arrastrar para curvarla */
+  curvable: boolean
 }
 
-function ArcoDibujado({ automata, manojo, resaltado, recorrido, onEntrar, onSalir, onClic, onMenu, onPulsacion }: ArcoProps) {
+function ArcoDibujado({ automata, manojo, resaltado, recorrido, onEntrar, onSalir, onClic, onMenu, onPulsacion, curvable }: ArcoProps) {
   const a = automata.estados.find((e) => e.id === manojo.desde)
   const b = automata.estados.find((e) => e.id === manojo.hasta)
   if (!a || !b) return null
 
-  const arco = manojo.desde === manojo.hasta ? arcoBucle(a) : arcoEntre(a, b, manojo.curvatura)
+  const arco =
+    manojo.desde === manojo.hasta ? arcoBucle(a, manojo.curvatura) : arcoEntre(a, b, manojo.curvatura)
   const texto = manojo.simbolos.map((s) => (s === EPSILON ? EPSILON_LABEL : s)).join(', ')
   const punta = recorrido ? 'punta-ambar' : resaltado ? 'punta-azul' : 'punta'
   const ancho = texto.length * 7.2 + 8
 
   return (
     <g
-      className={'arco' + (resaltado ? ' resaltado' : '') + (recorrido ? ' recorrido' : '')}
+      className={
+        'arco' + (resaltado ? ' resaltado' : '') + (recorrido ? ' recorrido' : '') + (curvable ? ' curvable' : '')
+      }
       onMouseEnter={onEntrar}
       onMouseLeave={onSalir}
       onClick={onClic}

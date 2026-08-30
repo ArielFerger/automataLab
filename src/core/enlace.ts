@@ -59,6 +59,8 @@ function aMinimo(doc: Documento) {
       tr: doc.automata.transiciones.map((t) => [t.desde, t.simbolo, t.hasta]),
       i: doc.automata.inicial,
       f: doc.automata.finales,
+      c: doc.automata.curvas,
+      x: doc.automata.textos?.map((t) => [t.id, t.contenido, Math.round(t.x), Math.round(t.y)]),
     },
   }
 }
@@ -74,6 +76,8 @@ function desdeMinimo(m: ReturnType<typeof aMinimo>): Documento {
       transiciones: m.a.tr.map((t) => ({ desde: t[0], simbolo: t[1], hasta: t[2] })),
       inicial: m.a.i,
       finales: m.a.f,
+      curvas: m.a.c,
+      textos: m.a.x?.map((t) => ({ id: t[0], contenido: t[1], x: t[2], y: t[3] })),
     },
   })
 }

@@ -38,6 +38,14 @@ export interface Transicion {
   simbolo: string
 }
 
+/** Un cuadro de texto suelto sobre el lienzo: una aclaración, un título, una nota. */
+export interface Texto {
+  id: string
+  contenido: string
+  x: number
+  y: number
+}
+
 export interface Automata {
   estados: Estado[]
   /** símbolos del alfabeto de entrada; nunca incluye ε */
@@ -47,6 +55,20 @@ export interface Automata {
   inicial: string
   /** ids de los estados de aceptación */
   finales: string[]
+  /**
+   * Curvatura elegida a mano para cada manojo de flechas, con la clave
+   * "desde>hasta". Sin entrada, la curva se calcula sola. En los bucles el
+   * número es el ángulo en grados alrededor del estado; en el resto, cuánto se
+   * separa la flecha de la recta.
+   */
+  curvas?: Record<string, number>
+  /** anotaciones libres; no forman parte del autómata, solo del dibujo */
+  textos?: Texto[]
+}
+
+/** Clave con la que se guarda la curvatura de un manojo de flechas. */
+export function claveArco(desde: string, hasta: string): string {
+  return desde + '>' + hasta
 }
 
 export type TipoAutomata = 'AFD' | 'AFN' | 'AFN-ε'
@@ -64,6 +86,8 @@ export function clonar(a: Automata): Automata {
     transiciones: a.transiciones.map((t) => ({ ...t })),
     inicial: a.inicial,
     finales: [...a.finales],
+    ...(a.curvas ? { curvas: { ...a.curvas } } : {}),
+    ...(a.textos ? { textos: a.textos.map((t) => ({ ...t })) } : {}),
   }
 }
 

@@ -81,9 +81,20 @@ export function autoDisponer(a: Automata): Automata {
 
 /** Caja que envuelve a todos los estados, con margen. */
 export function limites(a: Automata, margen = 90): { x: number; y: number; ancho: number; alto: number } {
-  if (a.estados.length === 0) return { x: 0, y: 0, ancho: 800, alto: 500 }
   const xs = a.estados.map((e) => e.x)
   const ys = a.estados.map((e) => e.y)
+
+  // Los cuadros de texto también cuentan: si no, uno puesto al costado del
+  // diagrama queda afuera del encuadre y se recorta al exportar la imagen.
+  for (const t of a.textos ?? []) {
+    const lineas = t.contenido.split('\n')
+    const ancho = Math.max(...lineas.map((l) => l.length), 1) * 7.4 + 16
+    xs.push(t.x, t.x + ancho)
+    ys.push(t.y - 8, t.y + lineas.length * 17 + 4)
+  }
+
+  if (xs.length === 0) return { x: 0, y: 0, ancho: 800, alto: 500 }
+
   const x = Math.min(...xs) - margen
   const y = Math.min(...ys) - margen
   return {

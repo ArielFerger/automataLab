@@ -2,6 +2,14 @@ import { describe, expect, it } from 'vitest'
 import { deserializar, documentoNuevo, nombreDeArchivo, serializar } from '../src/core/documento'
 import { documentoDelEnlace, enlaceDe } from '../src/core/enlace'
 import { svgDelDocumento } from '../src/core/exportar'
+import { limites } from '../src/core/layout'
+import {
+  ANGULO_BUCLE,
+  CURVA_DOBLE,
+  agruparTransiciones,
+  anguloHacia,
+  curvaturaHacia,
+} from '../src/core/geometria'
 import { ejemploLongitudPar } from '../src/store/useAutomaton'
 
 function ejemplo() {
@@ -87,5 +95,88 @@ describe('exportar', () => {
     const svg = svgDelDocumento(doc, { conTabla: false, conNotas: false })
     expect(svg).toContain('a &lt; b &amp; &quot;c&quot;')
     expect(svg).not.toContain('a < b &')
+  })
+})
+
+describe('flechas curvadas y cuadros de texto', () => {
+  function conAdornos() {
+    const d = ejemplo()
+    d.automata.curvas = { 'q0>q1': 42.5, 'q1>q1': -90 }
+    d.automata.textos = [{ id: 'txt0', contenido: 'Una nota\nen dos renglones', x: 120, y: 400 }]
+    return d
+  }
+
+  it('sobreviven al guardar y volver a abrir', () => {
+    const vuelta = deserializar(serializar(conAdornos()))
+    expect(vuelta.automata.curvas).toEqual({ 'q0>q1': 42.5, 'q1>q1': -90 })
+    expect(vuelta.automata.textos).toEqual([
+      { id: 'txt0', contenido: 'Una nota\nen dos renglones', x: 120, y: 400 },
+    ])
+  })
+
+  it('sobreviven al link compartido', async () => {
+    const url = await enlaceDe(conAdornos(), 'https://automatalab.app/')
+    const vuelta = await documentoDelEnlace(new URL(url).hash)
+    expect(vuelta?.automata.curvas).toEqual({ 'q0>q1': 42.5, 'q1>q1': -90 })
+    expect(vuelta?.automata.textos?.[0].contenido).toBe('Una nota\nen dos renglones')
+  })
+
+  it('descarta curvas con valores que no son números', () => {
+    const roto = JSON.parse(serializar(ejemplo()))
+    roto.automata.curvas = { 'q0>q1': 10, 'q1>q0': 'ochenta', 'q0>q0': null }
+    expect(deserializar(JSON.stringify(roto)).automata.curvas).toEqual({ 'q0>q1': 10 })
+  })
+
+  it('el texto entra en la imagen exportada', () => {
+    const svg = svgDelDocumento(conAdornos(), { conTabla: false, conNotas: false })
+    expect(svg).toContain('Una nota')
+    expect(svg).toContain('en dos renglones')
+  })
+
+  it('el encuadre incluye los textos, para que no se recorten', () => {
+    const sin = limites({ ...ejemplo().automata, textos: undefined })
+    const con = limites(conAdornos().automata)
+    // El texto está bien abajo del diagrama: la caja tiene que crecer para taparlo.
+    expect(con.alto).toBeGreaterThan(sin.alto)
+    expect(con.y + con.alto).toBeGreaterThan(400)
+  })
+})
+
+describe('curvatura de las flechas', () => {
+  const conCurva = { ...ejemplo().automata, curvas: { 'q0>q1': 55 } }
+
+  it('usa la curva elegida a mano y avisa que lo es', () => {
+    const m = agruparTransiciones(conCurva).find((x) => x.desde === 'q0' && x.hasta === 'q1')
+    expect(m?.curvatura).toBe(55)
+    expect(m?.aMano).toBe(true)
+  })
+
+  it('sin elección, dos estados que se apuntan se curvan solos', () => {
+    const m = agruparTransiciones(ejemplo().automata).find((x) => x.desde === 'q0')
+    expect(m?.curvatura).toBe(CURVA_DOBLE)
+    expect(m?.aMano).toBe(false)
+  })
+
+  it('un bucle sin elección se apoya arriba del estado', () => {
+    const a = ejemplo().automata
+    a.transiciones.push({ desde: 'q0', hasta: 'q0', simbolo: 'a' })
+    const m = agruparTransiciones(a).find((x) => x.desde === 'q0' && x.hasta === 'q0')
+    expect(m?.curvatura).toBe(ANGULO_BUCLE)
+  })
+
+  it('curvaturaHacia es la inversa: la flecha pasa por donde se la arrastra', () => {
+    const a = { x: 100, y: 200 }
+    const b = { x: 400, y: 200 }
+    // Perpendicular a un tramo horizontal: mover en y equivale a curvar.
+    for (const k of [-80, -20, 30, 120]) {
+      const objetivo = { x: 250, y: 200 + k }
+      expect(Math.round(curvaturaHacia(a, b, objetivo))).toBe(k)
+    }
+  })
+
+  it('anguloHacia apunta al lado donde se suelta el bucle', () => {
+    const centro = { x: 100, y: 100 }
+    expect(Math.round(anguloHacia(centro, { x: 100, y: 40 }))).toBe(-90)
+    expect(Math.round(anguloHacia(centro, { x: 160, y: 100 }))).toBe(0)
   })
 })
