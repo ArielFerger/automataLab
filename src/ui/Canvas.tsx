@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
   type Automata,
+  type Curva,
   EPSILON,
   EPSILON_LABEL,
   agregarEstado,
@@ -19,9 +20,9 @@ import {
   RADIO,
   RADIO_FINAL,
   agruparTransiciones,
-  anguloHacia,
   arcoBucle,
   arcoEntre,
+  bucleHacia,
   curvaturaHacia,
   flechaInicial,
 } from '../core/geometria'
@@ -191,12 +192,13 @@ export function Canvas(props: Props) {
   // ------------------------------------------------- curvatura de las flechas
 
   /** Fija la curvatura de un manojo. Con `null` vuelve a la curva automática. */
-  function fijarCurva(m: Manojo, valor: number | null) {
+  function fijarCurva(m: Manojo, valor: Curva | null) {
     const r = clonar(automata)
     const curvas = { ...(r.curvas ?? {}) }
     const clave = claveArco(m.desde, m.hasta)
     if (valor === null) delete curvas[clave]
-    else curvas[clave] = Math.round(valor * 10) / 10
+    else if (typeof valor === 'number') curvas[clave] = Math.round(valor * 10) / 10
+    else curvas[clave] = { angulo: Math.round(valor.angulo * 10) / 10, radio: Math.round(valor.radio) }
     if (Object.keys(curvas).length > 0) r.curvas = curvas
     else delete r.curvas
     onCambio(r)
@@ -228,11 +230,13 @@ export function Canvas(props: Props) {
   }
 
   /** Traduce la posición del puntero a curvatura, según sea bucle o flecha. */
-  function curvaturaEn(m: Manojo, punto: { x: number; y: number }): number {
+  function curvaturaEn(m: Manojo, punto: { x: number; y: number }): Curva {
     const a = automata.estados.find((e) => e.id === m.desde)
     const b = automata.estados.find((e) => e.id === m.hasta)
     if (!a || !b) return m.curvatura
-    if (m.desde === m.hasta) return anguloHacia(a, punto)
+    // En un bucle el arrastre define las dos cosas: hacia dónde apunta y qué tan
+    // grande es. Con solo el ángulo, no había manera de agrandarlo.
+    if (m.desde === m.hasta) return bucleHacia(a, punto)
     // Se limita para que la flecha no se dispare lejos de un tirón.
     return Math.max(-600, Math.min(600, curvaturaHacia(a, b, punto)))
   }
@@ -962,7 +966,9 @@ function ArcoDibujado({ automata, manojo, resaltado, recorrido, onEntrar, onSali
   if (!a || !b) return null
 
   const arco =
-    manojo.desde === manojo.hasta ? arcoBucle(a, manojo.curvatura) : arcoEntre(a, b, manojo.curvatura)
+    manojo.desde === manojo.hasta
+      ? arcoBucle(a, manojo.curvatura, manojo.radio)
+      : arcoEntre(a, b, manojo.curvatura)
   const texto = manojo.simbolos.map((s) => (s === EPSILON ? EPSILON_LABEL : s)).join(', ')
   const punta = recorrido ? 'punta-ambar' : resaltado ? 'punta-azul' : 'punta'
   const ancho = texto.length * 7.2 + 8

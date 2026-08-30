@@ -20,6 +20,8 @@ const PUNTA = 9
 export const ANGULO_BUCLE = -90
 /** Separación por omisión cuando dos estados se apuntan mutuamente. */
 export const CURVA_DOBLE = 26
+/** Qué tan lejos del centro del estado queda el vértice de un bucle nuevo. */
+export const RADIO_BUCLE = 58
 
 /** Todas las flechas que van de un estado a otro, con sus símbolos juntos. */
 export interface Manojo {
@@ -31,6 +33,8 @@ export interface Manojo {
    * perpendicular respecto de la recta que une los dos estados.
    */
   curvatura: number
+  /** solo en los bucles: a qué distancia del centro queda el vértice */
+  radio: number
   /** true si el valor lo eligió la persona y no el cálculo automático */
   aMano: boolean
 }
@@ -53,11 +57,15 @@ export function agruparTransiciones(a: Automata): Manojo[] {
     const desde = clave.slice(0, corte)
     const hasta = clave.slice(corte + 1)
     const elegida = a.curvas?.[clave]
+    // Un número suelto en un bucle es el formato viejo: solo traía el ángulo.
+    const angulo = typeof elegida === 'object' ? elegida.angulo : elegida
+    const radio = typeof elegida === 'object' ? elegida.radio : RADIO_BUCLE
     manojos.push({
       desde,
       hasta,
       simbolos,
-      curvatura: elegida ?? curvaturaAutomatica(mapa, desde, hasta),
+      curvatura: angulo ?? curvaturaAutomatica(mapa, desde, hasta),
+      radio,
       aMano: elegida !== undefined,
     })
   }
@@ -97,31 +105,65 @@ function bezierCubica(p0: Punto, c1: Punto, c2: Punto, p3: Punto): Punto {
   }
 }
 
+/** Más chico que esto el bucle queda tapado por el propio estado. */
+export const RADIO_BUCLE_MINIMO = RADIO + 16
+export const RADIO_BUCLE_MAXIMO = 420
+
+/** Separación angular de los extremos del bucle sobre el borde del estado. */
+const SEPARACION_BUCLE = 40
+/** Apertura de los puntos de control: define lo panzón que se ve el bucle. */
+const APERTURA_BUCLE = 25
+
 /**
  * Bucle: arco que sale y vuelve al mismo estado.
- * `angulo` (en grados) dice de qué lado del estado se apoya.
+ *
+ * `angulo` (en grados) dice de qué lado del estado se apoya, y `radio` a qué
+ * distancia del centro queda el vértice. Los puntos de control se despejan de
+ * ese radio, no al revés: así el bucle pasa exactamente por donde se lo arrastra.
+ *
+ * Antes los controles estaban fijos y el vértice caía a 22 px del centro, o sea
+ * dentro del propio estado (que mide 23 de radio): el bucle nacía tapado y no
+ * había forma de agrandarlo.
  */
-export function arcoBucle(centro: Punto, angulo: number = ANGULO_BUCLE): Arco {
+export function arcoBucle(centro: Punto, angulo: number = ANGULO_BUCLE, radio: number = RADIO_BUCLE): Arco {
   const g = (grados: number) => (grados * Math.PI) / 180
   const en = (ang: number, r: number): Punto => ({
     x: centro.x + r * Math.cos(ang),
     y: centro.y + r * Math.sin(ang),
   })
-  const p0 = en(g(angulo - 50), RADIO)
-  const p3 = en(g(angulo + 50), RADIO - PUNTA * 0.35)
-  const c1 = en(g(angulo - 68), RADIO * 2.9)
-  const c2 = en(g(angulo + 68), RADIO * 2.9)
+
+  const r = Math.max(RADIO_BUCLE_MINIMO, Math.min(RADIO_BUCLE_MAXIMO, radio))
+  const p0 = en(g(angulo - SEPARACION_BUCLE), RADIO)
+  const p3 = en(g(angulo + SEPARACION_BUCLE), RADIO - PUNTA * 0.35)
+
+  // El vértice de una Bézier cúbica simétrica cae a (2·R·cos(sep) + 6·L·cos(ap))/8
+  // del centro. Se despeja L para que ese vértice quede justo a `r`.
+  const largo =
+    (8 * r - 2 * RADIO * Math.cos(g(SEPARACION_BUCLE))) / (6 * Math.cos(g(APERTURA_BUCLE)))
+  const c1 = en(g(angulo - APERTURA_BUCLE), largo)
+  const c2 = en(g(angulo + APERTURA_BUCLE), largo)
+
   const medio = bezierCubica(p0, c1, c2, p3)
   // La etiqueta se corre un poco más lejos del nodo, en la misma dirección.
-  const fuera = en(g(angulo), 1)
-  const dx = fuera.x - centro.x
-  const dy = fuera.y - centro.y
+  const dx = Math.cos(g(angulo))
+  const dy = Math.sin(g(angulo))
   return {
     d: `M ${p0.x} ${p0.y} C ${c1.x} ${c1.y} ${c2.x} ${c2.y} ${p3.x} ${p3.y}`,
-    etiqueta: { x: medio.x + dx * 10, y: medio.y + dy * 10 },
+    etiqueta: { x: medio.x + dx * 12, y: medio.y + dy * 12 },
     inicio: p0,
     fin: p3,
     vertice: medio,
+  }
+}
+
+/** Ángulo y radio que hacen que el bucle pase por `punto`. */
+export function bucleHacia(centro: Punto, punto: Punto): { angulo: number; radio: number } {
+  return {
+    angulo: anguloHacia(centro, punto),
+    radio: Math.max(
+      RADIO_BUCLE_MINIMO,
+      Math.min(RADIO_BUCLE_MAXIMO, Math.hypot(punto.x - centro.x, punto.y - centro.y)),
+    ),
   }
 }
 

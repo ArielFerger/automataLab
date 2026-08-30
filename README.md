@@ -36,8 +36,9 @@ tabla de transiciones está al lado y se edita también; señalar una celda resa
 diagrama y al revés.
 
 **Flechas a gusto.** Con la herramienta Mover, arrastrar una flecha la curva, y el vértice sigue al
-puntero. Los bucles giran alrededor de su estado, para sacarlos de donde molesten. La curva elegida
-se guarda con el autómata; desde el menú de la flecha se vuelve a la automática.
+puntero. Los bucles se arrastran igual: la dirección los lleva alrededor del estado y la distancia
+los agranda o los achica. La forma elegida se guarda con el autómata; desde el menú de la flecha se
+vuelve a la automática.
 
 Al hacerle clic, la flecha queda seleccionada y aparecen sus tres tiradores: el del medio la flexiona
 y los de las puntas la reenganchan. Arrastrando una punta hasta otro estado, todas las transiciones

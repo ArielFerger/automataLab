@@ -52,7 +52,8 @@ function diagrama(a: Automata): { svg: string; ancho: number; alto: number } {
     const desde = a.estados.find((e) => e.id === m.desde)
     const hasta = a.estados.find((e) => e.id === m.hasta)
     if (!desde || !hasta) continue
-    const arco = m.desde === m.hasta ? arcoBucle(desde, m.curvatura) : arcoEntre(desde, hasta, m.curvatura)
+    const arco =
+      m.desde === m.hasta ? arcoBucle(desde, m.curvatura, m.radio) : arcoEntre(desde, hasta, m.curvatura)
     const texto = m.simbolos.map((s) => (s === EPSILON ? EPSILON_LABEL : s)).join(', ')
     const ancho = texto.length * 7.2 + 8
     partes.push(

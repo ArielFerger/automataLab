@@ -9,6 +9,11 @@ import {
   agruparTransiciones,
   anguloHacia,
   curvaturaHacia,
+  RADIO,
+  RADIO_BUCLE,
+  RADIO_BUCLE_MINIMO,
+  arcoBucle,
+  bucleHacia,
 } from '../src/core/geometria'
 import { ejemploLongitudPar } from '../src/store/useAutomaton'
 
@@ -178,5 +183,75 @@ describe('curvatura de las flechas', () => {
     const centro = { x: 100, y: 100 }
     expect(Math.round(anguloHacia(centro, { x: 100, y: 40 }))).toBe(-90)
     expect(Math.round(anguloHacia(centro, { x: 160, y: 100 }))).toBe(0)
+  })
+})
+
+describe('geometría del bucle', () => {
+  const centro = { x: 200, y: 200 }
+  const lejos = (a: { x: number; y: number }, b: { x: number; y: number }) => Math.hypot(a.x - b.x, a.y - b.y)
+
+  it('el vértice queda fuera del estado, no tapado por él', () => {
+    // Era el error: con los controles fijos el vértice caía a 22 px del centro
+    // y el estado mide 23 de radio, así que el bucle nacía adentro.
+    const v = arcoBucle(centro).vertice
+    expect(lejos(v, centro)).toBeGreaterThan(RADIO + 10)
+  })
+
+  it('el vértice cae exactamente al radio pedido', () => {
+    for (const r of [40, 58, 90, 160]) {
+      expect(Math.round(lejos(arcoBucle(centro, -90, r).vertice, centro))).toBe(r)
+    }
+  })
+
+  it('se puede agrandar y achicar', () => {
+    const chico = lejos(arcoBucle(centro, -90, 40).vertice, centro)
+    const grande = lejos(arcoBucle(centro, -90, 150).vertice, centro)
+    expect(grande).toBeGreaterThan(chico * 2)
+  })
+
+  it('no se puede achicar hasta quedar adentro del estado', () => {
+    const v = arcoBucle(centro, -90, 1).vertice
+    expect(lejos(v, centro)).toBeGreaterThanOrEqual(RADIO_BUCLE_MINIMO - 0.5)
+  })
+
+  it('el ángulo lo lleva alrededor del estado', () => {
+    expect(arcoBucle(centro, -90, 80).vertice.y).toBeLessThan(centro.y)
+    expect(arcoBucle(centro, 90, 80).vertice.y).toBeGreaterThan(centro.y)
+    expect(arcoBucle(centro, 0, 80).vertice.x).toBeGreaterThan(centro.x)
+    expect(arcoBucle(centro, 180, 80).vertice.x).toBeLessThan(centro.x)
+  })
+
+  it('bucleHacia es la inversa: el bucle pasa por donde se lo arrastra', () => {
+    for (const objetivo of [
+      { x: 200, y: 110 },
+      { x: 300, y: 200 },
+      { x: 140, y: 260 },
+    ]) {
+      const { angulo, radio } = bucleHacia(centro, objetivo)
+      const v = arcoBucle(centro, angulo, radio).vertice
+      expect(Math.round(v.x)).toBe(objetivo.x)
+      expect(Math.round(v.y)).toBe(objetivo.y)
+    }
+  })
+
+  it('guarda y recupera el ángulo con el tamaño', () => {
+    const d = ejemplo()
+    d.automata.transiciones.push({ desde: 'q0', hasta: 'q0', simbolo: 'a' })
+    d.automata.curvas = { 'q0>q0': { angulo: 35, radio: 120 } }
+    const vuelta = deserializar(serializar(d))
+    expect(vuelta.automata.curvas).toEqual({ 'q0>q0': { angulo: 35, radio: 120 } })
+    const m = agruparTransiciones(vuelta.automata).find((x) => x.desde === 'q0' && x.hasta === 'q0')
+    expect(m?.curvatura).toBe(35)
+    expect(m?.radio).toBe(120)
+  })
+
+  it('un archivo viejo, con solo el ángulo, se sigue leyendo', () => {
+    const d = ejemplo()
+    d.automata.transiciones.push({ desde: 'q0', hasta: 'q0', simbolo: 'a' })
+    // Formato anterior: el bucle guardaba un número suelto.
+    d.automata.curvas = { 'q0>q0': 20 }
+    const m = agruparTransiciones(deserializar(serializar(d)).automata).find((x) => x.desde === x.hasta)
+    expect(m?.curvatura).toBe(20)
+    expect(m?.radio).toBe(RADIO_BUCLE)
   })
 })

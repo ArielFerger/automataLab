@@ -38,6 +38,16 @@ export interface Transicion {
   simbolo: string
 }
 
+/**
+ * Forma elegida a mano para un manojo de flechas.
+ *
+ * En una flecha común alcanza un número: cuánto se separa de la recta. Un bucle
+ * necesita dos cosas, de qué lado del estado se apoya y qué tan grande es, así
+ * que va como objeto. Los archivos viejos guardaban solo el ángulo del bucle
+ * como número suelto, y se siguen leyendo.
+ */
+export type Curva = number | { angulo: number; radio: number }
+
 /** Un cuadro de texto suelto sobre el lienzo: una aclaración, un título, una nota. */
 export interface Texto {
   id: string
@@ -57,11 +67,9 @@ export interface Automata {
   finales: string[]
   /**
    * Curvatura elegida a mano para cada manojo de flechas, con la clave
-   * "desde>hasta". Sin entrada, la curva se calcula sola. En los bucles el
-   * número es el ángulo en grados alrededor del estado; en el resto, cuánto se
-   * separa la flecha de la recta.
+   * "desde>hasta". Sin entrada, la curva se calcula sola.
    */
-  curvas?: Record<string, number>
+  curvas?: Record<string, Curva>
   /** anotaciones libres; no forman parte del autómata, solo del dibujo */
   textos?: Texto[]
 }

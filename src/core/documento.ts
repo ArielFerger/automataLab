@@ -6,7 +6,7 @@
  * y con los datos que lo acompañan.
  */
 
-import { type Automata, type Texto, automataVacio } from './automaton'
+import { type Automata, type Curva, type Texto, automataVacio } from './automaton'
 
 export const VERSION_FORMATO = 1
 
@@ -113,10 +113,25 @@ function validarAutomata(crudo: unknown): Automata {
  * Se exige que ya sea un número, sin convertir. Number(null) da 0, que es finito,
  * así que un null se colaría como una curvatura válida de cero.
  */
-function validarCurvas(crudo: Record<string, unknown>): Record<string, number> {
-  const out: Record<string, number> = {}
+function validarCurvas(crudo: Record<string, unknown>): Record<string, Curva> {
+  const out: Record<string, Curva> = {}
   for (const [clave, valor] of Object.entries(crudo)) {
-    if (typeof valor === 'number' && Number.isFinite(valor)) out[clave] = valor
+    if (typeof valor === 'number' && Number.isFinite(valor)) {
+      out[clave] = valor
+      continue
+    }
+    // Los bucles guardan ángulo y radio juntos.
+    if (valor && typeof valor === 'object') {
+      const o = valor as Record<string, unknown>
+      if (
+        typeof o.angulo === 'number' &&
+        Number.isFinite(o.angulo) &&
+        typeof o.radio === 'number' &&
+        Number.isFinite(o.radio)
+      ) {
+        out[clave] = { angulo: o.angulo, radio: o.radio }
+      }
+    }
   }
   return out
 }
