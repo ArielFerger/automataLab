@@ -156,9 +156,9 @@ export const PARTE_2: Ejercicio[] = [
     punto: 'A',
     enunciado: 'Conjunto de cadenas sobre {0, 1} de la forma xwx, donde x y w en {0, 1}⁺.',
     alfabeto: ['0', '1'],
-    regular: true,
-    predicado: (w) => w.length >= 3 && w[0] === w[w.length - 1],
-    nota: 'Trampa: como x puede ser un solo símbolo, alcanza con que la cadena tenga largo 3 o más y empiece y termine igual. No hay que recordar nada, así que sí es regular.',
+    regular: false,
+    porQueNo: 'No es regular. Al intersectar con 0⁺10⁺1 quedan exactamente 0ⁱ10ʲ1 con j > i ≥ 1: el bloque repetido x debe ser 0ⁱ1 y el centro no vacío aporta los ceros restantes. Si hubiera constante de bombeo p, 0ᵖ10ᵖ⁺¹1 pertenecería, pero bombear los primeros ceros haría i ≥ j y saldría del lenguaje. La intersección con un lenguaje regular no puede producir uno no regular si el original fuera regular.',
+    nota: 'x es una cadena completa, no necesariamente un símbolo. Por ejemplo, 01001 = (01)(0)(01) pertenece aunque empiece y termine distinto. No alcanza con comparar el primer y el último símbolo.',
   },
   {
     id: 58,
@@ -262,9 +262,13 @@ export const PARTE_2: Ejercicio[] = [
     punto: 'A',
     enunciado: 'Conjunto de cadenas sobre {a, b} que contengan al menos una subcadena de la forma bⁿaⁿ con n > 1.',
     alfabeto: ['a', 'b'],
-    regular: false,
-    porQueNo:
-      'Buscar bⁿaⁿ con n sin cota obliga a comparar dos cantidades arbitrariamente grandes. Un autómata finito solo podría chequear un n fijo.',
+    regular: true,
+    referencia: '(a|b)*bbaa(a|b)*',
+    predicado: (w) => {
+      for (let n = 2; n * 2 <= w.length; n++) if (w.includes('b'.repeat(n) + 'a'.repeat(n))) return true
+      return false
+    },
+    nota: 'Todo bloque bⁿaⁿ con n > 1 contiene bbaa en la unión de sus bloques. Y bbaa ya es un caso permitido con n = 2. Entonces basta con buscar esa subcadena fija; sí es regular.',
   },
   {
     id: 68,
@@ -374,9 +378,10 @@ export const PARTE_2: Ejercicio[] = [
     enunciado:
       'Conjunto de cadenas sobre {a, b} de la forma aⁿbⁿ (con n > 0), o que comiencen con a y terminen con bbb.',
     alfabeto: ['a', 'b'],
-    regular: false,
-    porQueNo:
-      'La segunda parte sí es regular, pero la unión no lo es: aⁿbⁿ con n distinto de 3 no queda cubierto por ella, y decidir esa parte exige comparar las dos cantidades sin cota.',
+    regular: true,
+    referencia: 'ab|aabb|a(a|b)*bbb',
+    predicado: (w) => (w.startsWith('a') && w.endsWith('bbb')) || (/^a+b+$/.test(w) && cuenta(w, 'a') === cuenta(w, 'b')),
+    nota: 'Para todo n ≥ 3, aⁿbⁿ ya empieza con a y termina en bbb. Solo hay que sumar los casos n = 1 y n = 2: ab y aabb. La unión es regular.',
   },
   {
     id: 80,

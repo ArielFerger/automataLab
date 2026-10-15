@@ -9,3 +9,9 @@ tsconfig.tsbuildinfo
 # Material original de la cátedra (PDFs, diapositivas, exámenes escaneados):
 # no es parte de la app y no corresponde subirlo a un repo público.
 /Paradigmas y Lenguajes-*/
+/*.zip
+/.codex-temp/
+/before.png
+/.impeccable/review/
+/test-results/
+/playwright-report/

@@ -30,6 +30,7 @@ interface Props {
 export function TransitionTable({ automata, onCambio, foco, onFoco, activos = [], soloLectura }: Props) {
   const [editando, setEditando] = useState<{ estado: string; simbolo: string } | null>(null)
   const [borrador, setBorrador] = useState('')
+  const [error, setError] = useState('')
 
   const columnas = [...automata.alfabeto]
   if (tieneEpsilon(automata)) columnas.push(EPSILON)
@@ -40,6 +41,7 @@ export function TransitionTable({ automata, onCambio, foco, onFoco, activos = []
 
   function abrir(estado: string, simbolo: string) {
     if (soloLectura) return
+    setError('')
     setEditando({ estado, simbolo })
     setBorrador(destinos(automata, estado, simbolo).map((id) => nombreDe(automata, id)).join(', '))
   }
@@ -53,6 +55,9 @@ export function TransitionTable({ automata, onCambio, foco, onFoco, activos = []
       .filter(Boolean)
 
     let r = clonar(automata)
+    const desconocidos = nombres.filter(n => !r.estados.some(e => e.nombre === n || e.id === n))
+    if (desconocidos.length) { setError('No existen estos estados: ' + desconocidos.join(', ') + '. Crealos primero o corregí los nombres.'); return }
+    setError('')
     // Se reemplaza la celda entera: primero se quitan las transiciones viejas.
     r.transiciones = r.transiciones.filter((t) => !(t.desde === estado && t.simbolo === simbolo))
     for (const nombre of nombres) {
@@ -66,18 +71,19 @@ export function TransitionTable({ automata, onCambio, foco, onFoco, activos = []
   return (
     <div className="tabla-scroll">
     <table className="tabla">
+      <caption className="visualmente-oculto">Tabla de transiciones. La flecha indica el estado inicial y el asterisco, un estado final.</caption>
       <thead>
         <tr>
-          <th style={{ width: '1%' }}>δ</th>
+          <th scope="col" style={{ width: '1%' }}>δ</th>
           {columnas.map((s) => (
-            <th key={s || 'eps'}>{s === EPSILON ? EPSILON_LABEL : s}</th>
+            <th scope="col" key={s || 'eps'}>{s === EPSILON ? EPSILON_LABEL : s}</th>
           ))}
         </tr>
       </thead>
       <tbody>
         {automata.estados.map((e) => (
           <tr key={e.id}>
-            <th onMouseEnter={() => onFoco({ tipo: 'arco', desde: e.id, hasta: e.id })} onMouseLeave={() => onFoco(null)}>
+            <th scope="row" onMouseEnter={() => onFoco({ tipo: 'arco', desde: e.id, hasta: e.id })} onMouseLeave={() => onFoco(null)}>
               {automata.inicial === e.id && <span className="marca-inicial">→</span>}
               {automata.finales.includes(e.id) && <span className="marca-final">∗</span>}
               {e.nombre}
@@ -98,6 +104,9 @@ export function TransitionTable({ automata, onCambio, foco, onFoco, activos = []
                 <td
                   key={s || 'eps'}
                   className={clases}
+                  tabIndex={soloLectura ? undefined : 0}
+                  aria-label={`${e.nombre}, símbolo ${s || 'ε'}: ${ds.map(id => nombreDe(automata, id)).join(', ') || 'sin destino'}${soloLectura ? '' : '. Enter para editar'}`}
+                  onKeyDown={ev => { if (ev.target === ev.currentTarget && (ev.key === 'Enter' || ev.key === ' ')) { ev.preventDefault(); abrir(e.id, s) } }}
                   onMouseEnter={() => onFoco({ tipo: 'celda', desde: e.id, simbolo: s })}
                   onMouseLeave={() => onFoco(null)}
                   onClick={() => !editandoEsta && abrir(e.id, s)}
@@ -108,6 +117,8 @@ export function TransitionTable({ automata, onCambio, foco, onFoco, activos = []
                       className="campo mono"
                       style={{ padding: '1px 3px', minWidth: 62 }}
                       value={borrador}
+                      aria-label={`Destinos de ${e.nombre} con ${s || 'ε'}`}
+                      aria-invalid={!!error}
                       onChange={(ev) => setBorrador(ev.target.value)}
                       onBlur={guardar}
                       onKeyDown={(ev) => {
@@ -127,6 +138,7 @@ export function TransitionTable({ automata, onCambio, foco, onFoco, activos = []
         ))}
       </tbody>
     </table>
+    {error && <p role="alert" className="aviso">{error}</p>}
     </div>
   )
 }

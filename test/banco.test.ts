@@ -81,6 +81,6 @@ describe('banco de ejercicios', () => {
   })
 
   it('los lenguajes no regulares son los esperados', () => {
-    expect(NO_REGULARES).toEqual([34, 37, 38, 40, 41, 62, 67, 71, 72, 73, 76, 79])
+    expect(NO_REGULARES).toEqual([34, 37, 38, 40, 41, 57, 62, 71, 72, 73, 76])
   })
 })

@@ -8,20 +8,23 @@ import { EditorPage } from './ui/pages/EditorPage'
 import { ConversionesPage } from './ui/pages/ConversionesPage'
 import { PracticaPage } from './ui/pages/PracticaPage'
 import { ParcialesPage } from './ui/pages/ParcialesPage'
-import { ComunidadPage } from './ui/pages/ComunidadPage'
+import { ProgresoPage } from './ui/pages/ProgresoPage'
+import { useLocal } from './store/useLocal'
+import type { Automata } from './core/automaton'
 
-type Vista = 'editor' | 'conversiones' | 'practica' | 'parciales' | 'comunidad'
+type Vista = 'editor' | 'conversiones' | 'practica' | 'parciales' | 'progreso'
 
 const PESTANAS: { id: Vista; texto: string }[] = [
-  { id: 'editor', texto: 'Editor' },
-  { id: 'conversiones', texto: 'Conversiones' },
   { id: 'practica', texto: 'Práctica' },
   { id: 'parciales', texto: 'Parciales' },
-  { id: 'comunidad', texto: 'Comunidad' },
+  { id: 'editor', texto: 'Editor' },
+  { id: 'conversiones', texto: 'Conversiones' },
+  { id: 'progreso', texto: 'Mi progreso' },
 ]
 
 export default function App() {
-  const [vista, setVista] = useState<Vista>('editor')
+  const [vista, setVista] = useLocal<Vista>('automatalab:vista', () => 'practica', v => PESTANAS.some(p => p.id === v))
+  const [contexto, setContexto] = useLocal<{ titulo: string; volver: Vista } | null>('automatalab:contexto', () => null, c => c === null || (typeof c?.titulo === 'string' && ['practica', 'parciales'].includes(c.volver)))
   const historia = useAutomata()
   const progreso = useProgreso()
   const [tema, setTema] = useTema()
@@ -58,13 +61,22 @@ export default function App() {
     setVista('editor')
   }
 
+  function resolverEnEditor(a: Automata, titulo?: string, notas?: string) {
+    historia.setAutomata(a)
+    if (titulo) historia.setTitulo(titulo)
+    if (notas !== undefined) historia.setNotas(notas)
+    setContexto({ titulo: titulo ?? 'Tu diagrama', volver: vista === 'parciales' ? 'parciales' : 'practica' })
+    setVista('editor')
+  }
+
   return (
     <div className="app">
+      <a className="saltar-contenido" href="#contenido">Saltar al contenido</a>
       <header className="barra">
         <div className="marca">
-          AutómataLab <span>Paradigmas y Lenguajes</span>
+          AutómataLab <span>Tu cuaderno de práctica</span>
         </div>
-        <nav className="nav">
+        <nav className="nav" aria-label="Navegación principal">
           {PESTANAS.map((p) => (
             <button key={p.id} aria-current={vista === p.id ? 'page' : undefined} onClick={() => setVista(p.id)}>
               {p.texto}
@@ -82,16 +94,19 @@ export default function App() {
               ))}
             </select>
           </label>
-          <button className="btn chico" onClick={historia.deshacer} disabled={!historia.puedeDeshacer} title="Deshacer">
+          <button className="btn chico" onClick={historia.deshacer} disabled={!historia.puedeDeshacer} title="Deshacer" aria-label="Deshacer">
             <span className="icono-btn" aria-hidden="true">↶</span>
             <span className="texto-btn">Deshacer</span>
           </button>
-          <button className="btn chico" onClick={historia.rehacer} disabled={!historia.puedeRehacer} title="Rehacer">
+          <button className="btn chico" onClick={historia.rehacer} disabled={!historia.puedeRehacer} title="Rehacer" aria-label="Rehacer">
             <span className="icono-btn" aria-hidden="true">↷</span>
             <span className="texto-btn">Rehacer</span>
           </button>
         </div>
       </header>
+      {historia.errorGuardado && <p className="aviso malo" role="alert">No se pudo guardar el editor en este navegador. Usá Guardar para descargar tu diagrama antes de cerrar.</p>}
+
+      {vista === 'editor' && contexto && <div className="contexto-editor"><span>Resolviendo <strong>{contexto.titulo}</strong></span><button className="btn chico" onClick={() => setVista(contexto.volver)}>Volver a la respuesta y adjuntar</button></div>}
 
       {invitacion && (
         <div className="invitacion">
@@ -123,38 +138,29 @@ export default function App() {
         </div>
       )}
 
+      <main id="contenido" className="contenido-app" tabIndex={-1}>
       {vista === 'editor' && <EditorPage historia={historia} />}
       {vista === 'conversiones' && (
         <ConversionesPage
           delEditor={historia.automata}
-          onEnviarAlEditor={(a) => {
-            historia.setAutomata(a)
-            setVista('editor')
-          }}
+          onEnviarAlEditor={resolverEnEditor}
         />
       )}
       {vista === 'practica' && (
         <PracticaPage
           delEditor={historia.automata}
-          onEnviarAlEditor={(a) => {
-            historia.setAutomata(a)
-            setVista('editor')
-          }}
+          onEnviarAlEditor={resolverEnEditor}
           progreso={progreso}
         />
       )}
       {vista === 'parciales' && (
         <ParcialesPage
           delEditor={historia.automata}
-          onEnviarAlEditor={(a) => {
-            historia.setAutomata(a)
-            setVista('editor')
-          }}
+          onEnviarAlEditor={resolverEnEditor}
         />
       )}
-      {vista === 'comunidad' && (
-        <ComunidadPage documento={historia.documento} onAbrir={abrirDocumento} onAutor={historia.setAutor} />
-      )}
+      {vista === 'progreso' && <ProgresoPage progreso={progreso} onPracticar={(id, grupo) => { localStorage.setItem('automatalab:seleccion', JSON.stringify({ id, grupo })); setVista('practica') }} />}
+      </main>
     </div>
   )
 }

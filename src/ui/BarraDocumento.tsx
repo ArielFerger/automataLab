@@ -3,6 +3,8 @@ import { type Documento, descargar, deserializar, documentoNuevo, nombreDeArchiv
 import { pngDelDocumento, svgDelDocumento } from '../core/exportar'
 import { copiar, enlaceDe } from '../core/enlace'
 import { ejemploLongitudPar } from '../store/useAutomaton'
+import { AccionesIA } from './AccionesIA'
+import { textoAutomata } from '../core/paraIA'
 
 interface Props {
   documento: Documento
@@ -21,7 +23,7 @@ interface Props {
 export function BarraDocumento({ documento, onTitulo, onNotas, onAbrir }: Props) {
   const entradaArchivo = useRef<HTMLInputElement>(null)
   const [aviso, setAviso] = useState<{ texto: string; malo?: boolean } | null>(null)
-  const [abierto, setAbierto] = useState<'exportar' | 'compartir' | 'notas' | null>(null)
+  const [abierto, setAbierto] = useState<'exportar' | 'compartir' | 'notas' | 'ia' | null>(null)
   const [conTabla, setConTabla] = useState(true)
   const [conNotas, setConNotas] = useState(true)
   const [enlace, setEnlace] = useState('')
@@ -91,6 +93,7 @@ export function BarraDocumento({ documento, onTitulo, onNotas, onAbrir }: Props)
         <button className="btn chico" onClick={armarEnlace}>
           Compartir link
         </button>
+        <button className="btn chico" aria-expanded={abierto === 'ia'} onClick={() => setAbierto(a => a === 'ia' ? null : 'ia')}>Verificar con IA</button>
         <button className="btn chico" aria-pressed={abierto === 'notas'} onClick={() => setAbierto((a) => (a === 'notas' ? null : 'notas'))}>
           Notas{documento.notas.trim() ? ' •' : ''}
         </button>
@@ -118,12 +121,14 @@ export function BarraDocumento({ documento, onTitulo, onNotas, onAbrir }: Props)
         />
       </div>
 
+      {abierto === 'ia' && <div className="panel-desplegable"><AccionesIA texto={`${documento.titulo}\n\nENUNCIADO / NOTAS\n${documento.notas || '(Agregá el enunciado en Notas para una corrección completa.)'}\n\nMI DIAGRAMA\n${textoAutomata(documento.automata)}`} soloEnunciado={documento.notas || documento.titulo} /></div>}
+
       {abierto === 'exportar' && (
         <div className="panel-desplegable">
           <p className="ayuda" style={{ marginTop: 0 }}>
             La imagen sale con el título arriba y fondo blanco, para que se lea en cualquier chat.
           </p>
-          <div className="fila junta" style={{ flexWrap: 'wrap' }}>
+      <div className="fila junta" style={{ flexWrap: 'wrap' }}>
             <label className="casilla">
               <input type="checkbox" checked={conTabla} onChange={(ev) => setConTabla(ev.target.checked)} />
               Incluir la tabla de transiciones

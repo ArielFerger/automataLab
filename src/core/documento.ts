@@ -16,7 +16,7 @@ export interface Documento {
   automata: Automata
   /** anotaciones del autor: el enunciado, una aclaración, lo que sea */
   notas: string
-  /** quién lo hizo, para cuando se publica en la comunidad */
+  /** autor del archivo exportado */
   autor: string
   /** fecha ISO de la última edición */
   editado: string

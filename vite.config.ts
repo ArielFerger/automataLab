@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
@@ -9,6 +9,6 @@ export default defineConfig({
   test: {
     testTimeout: 180000,
     // Los *.gen.test.ts generan archivos fuente; se corren a mano, no en cada test.
-    exclude: ["**/node_modules/**", "**/dist/**", "**/*.gen.test.ts"],
+    exclude: ["**/node_modules/**", "**/dist/**", "**/*.gen.test.ts", "**/e2e/**"],
   },
 })

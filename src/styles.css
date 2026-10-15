@@ -841,8 +841,7 @@ ul {
   }
 
   .conversiones,
-  .parciales,
-  .comunidad {
+  .parciales {
     flex: 0 0 auto;
     min-height: 0;
   }
@@ -1692,118 +1691,6 @@ textarea.campo {
   font-size: 13.5px;
 }
 
-/* -------------------------------------------------------- comunidad */
-
-.comunidad {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.galeria {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 14px;
-}
-
-.tarjeta {
-  border: 1px solid var(--linea);
-  border-radius: var(--r);
-  background: var(--papel-alto);
-  padding: 12px 14px 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.tarjeta-cabecera {
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 10px;
-}
-
-.tarjeta-cabecera h3 {
-  margin: 0;
-  font-size: 14.5px;
-  line-height: 1.3;
-}
-
-.tarjeta-autor {
-  margin: 0;
-  font-size: 11.5px;
-  color: var(--tinta-tenue);
-  font-family: var(--mono);
-}
-
-.tarjeta-diagrama {
-  border: 1px solid var(--linea);
-  border-radius: var(--r-chico);
-  padding: 6px;
-  background: var(--papel);
-}
-
-.tarjeta-notas {
-  margin: 0;
-  font-size: 12.5px;
-  color: var(--tinta-suave);
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.pasos-numerados {
-  list-style: decimal;
-  padding-left: 22px;
-  font-size: 13.5px;
-  line-height: 1.75;
-}
-
-.pasos-numerados code {
-  font-family: var(--mono);
-  font-size: 12px;
-  background: var(--papel);
-  border: 1px solid var(--linea);
-  border-radius: var(--r-chico);
-  padding: 1px 5px;
-}
-
-/* --------------------------------------------------- edición de la galería */
-
-.admin-caja {
-  position: relative;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.admin-acceso {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 30;
-  width: max-content;
-  max-width: min(440px, calc(100vw - 32px));
-  margin-top: 0;
-  background: var(--papel-alto);
-  border-color: var(--linea-fuerte);
-  box-shadow: 0 8px 24px rgb(var(--sombra) / 0.22);
-}
-
-.tarjeta-edicion {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  border-top: 1px solid var(--linea);
-  padding-top: 10px;
-}
-
-.tarjeta-edicion .etiqueta-campo {
-  margin-top: 4px;
-}
-
 /* ==========================================================================
    Mobile
    ========================================================================== */
@@ -1864,9 +1751,6 @@ textarea.campo {
     padding: 12px 12px 14px;
   }
 
-  .galeria {
-    grid-template-columns: 1fr;
-  }
 
   .detalle-enunciado {
     font-size: 15px;

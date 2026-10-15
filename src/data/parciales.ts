@@ -9,9 +9,8 @@ import type { Ejercicio } from './tipos'
  *
  * Los enunciados de 2023 salen del PDF de la cátedra; los de 2025, de las fotos
  * del examen. En los cuatro casos el autómata del ítem 1 está solo como dibujo:
- * los de 2023 no se pudieron extraer del PDF y los de 2025 son manuscritos, así
- * que la transcripción que va acá está marcada como "a revisar" — conviene
- * compararla con la foto antes de darla por buena.
+ * los cuatro diagramas se transcribieron y cotejaron visualmente con los
+ * originales del ZIP de la cursada, incluyendo los finales del recuperatorio 2025.
  */
 
 export type TipoItem = 'af-a-er' | 'er-a-afd' | 'lenguaje'
@@ -122,8 +121,10 @@ export const PARCIALES: Parcial[] = [
         puntos: 20,
         tipo: 'af-a-er',
         consigna: 'Dado el siguiente autómata, pasar a ER.',
-        faltaDibujo:
-          'El autómata está solo como imagen dentro del PDF del parcial y no se pudo transcribir. Abrí Practica_I_-_AutomatasER junto con el PDF del examen, dibujalo en el editor y usá la pestaña Conversiones para verificar tu ER.',
+        automata: af(['q0', 'q1', 'q4', 'q5', 'q3'], 'q0', ['q5', 'q3'], [
+          ['q0', '0', 'q1'], ['q0', '1', 'q4'], ['q1', '0', 'q1'], ['q1', '1', 'q4'],
+          ['q4', '0', 'q5'], ['q5', '1', 'q4'], ['q5', '0', 'q3'], ['q3', '0', 'q3'], ['q3', '1', 'q3'],
+        ], ['0', '1']),
       },
       {
         numero: 2,
@@ -150,8 +151,11 @@ export const PARCIALES: Parcial[] = [
         puntos: 20,
         tipo: 'af-a-er',
         consigna: 'Dado el siguiente autómata, pasar a ER.',
-        faltaDibujo:
-          'El autómata está solo como imagen dentro del PDF del recuperatorio. Dibujalo en el editor y verificá tu ER desde la pestaña Conversiones.',
+        automata: af(['q0', 'q1', 'q2', 'q3', 'q4', 'q5'], 'q0', ['q3', 'q5'], [
+          ['q0', 'a', 'q1'], ['q0', 'b', 'q2'], ['q1', 'a', 'q4'], ['q1', 'b', 'q3'],
+          ['q2', 'a', 'q3'], ['q2', 'b', 'q4'], ['q3', 'a', 'q1'], ['q3', 'b', 'q5'],
+          ['q4', 'a', 'q4'], ['q4', 'b', 'q4'], ['q5', 'a', 'q5'], ['q5', 'b', 'q5'],
+        ], ['a', 'b']),
       },
       {
         numero: 2,
@@ -178,7 +182,6 @@ export const PARCIALES: Parcial[] = [
         puntos: 20,
         tipo: 'af-a-er',
         consigna: 'Dado el siguiente autómata, pasar a ER.',
-        transcripcion: true,
         automata: af(
           ['q0', 'q1', 'q2', 'q3'],
           'q0',
@@ -221,11 +224,10 @@ export const PARCIALES: Parcial[] = [
         puntos: 20,
         tipo: 'af-a-er',
         consigna: 'Dado el siguiente autómata, pasar a ER.',
-        transcripcion: true,
         automata: af(
           ['q0', 'q1', 'q2', 'q3'],
           'q0',
-          ['q1', 'q2'],
+          ['q0', 'q2'],
           [
             ['q0', 'a', 'q1'],
             ['q1', 'a', 'q0'],

@@ -11,7 +11,7 @@ import type { Ejercicio } from './tipos'
  * test/generarReferencias.gen.test.ts y se pegan acá al armar la lista.
  */
 function conReferencia(e: Ejercicio): Ejercicio {
-  return { ...e, referencia: e.referencia ?? REFERENCIAS[e.id] }
+  return e.regular ? { ...e, referencia: e.referencia ?? REFERENCIAS[e.id] } : e
 }
 
 /** Ejercicios que se corrigen comparando lenguajes: los puntos A y E. */

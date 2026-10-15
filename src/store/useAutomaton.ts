@@ -35,6 +35,7 @@ function documentoInicial(): Documento {
 }
 
 export interface Historia {
+  errorGuardado: boolean
   documento: Documento
   /** atajo a documento.automata, que es lo que usan casi todas las pantallas */
   automata: Automata
@@ -54,6 +55,7 @@ export interface Historia {
 }
 
 export function useAutomata(): Historia {
+  const [errorGuardado, setErrorGuardado] = useState(false)
   const [documento, setDocumento] = useState<Documento>(documentoInicial)
   const [pasado, setPasado] = useState<Documento[]>([])
   const [futuro, setFuturo] = useState<Documento[]>([])
@@ -61,14 +63,12 @@ export function useAutomata(): Historia {
 
   useEffect(() => {
     ultimo.current = documento
-    const t = setTimeout(() => {
-      try {
-        localStorage.setItem(CLAVE, JSON.stringify(documento))
-      } catch {
-        // Sin localStorage (ventana privada) la app sigue andando, sin persistir.
-      }
-    }, 250)
-    return () => clearTimeout(t)
+    try {
+      localStorage.setItem(CLAVE, JSON.stringify(documento))
+      setErrorGuardado(false)
+    } catch {
+      setErrorGuardado(true)
+    }
   }, [documento])
 
   const conHistoria = useCallback((cambio: (d: Documento) => Documento) => {
@@ -106,6 +106,7 @@ export function useAutomata(): Historia {
   }, [])
 
   return {
+    errorGuardado,
     documento,
     automata: documento.automata,
     setAutomata,

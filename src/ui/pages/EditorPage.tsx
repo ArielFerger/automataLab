@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import {
   type Automata,
+  agregarEstado,
   alternarFinal,
   clasificar,
   clonar,
@@ -55,6 +56,7 @@ export function EditorPage({ historia }: { historia: Historia }) {
 
       <div className="panel">
         <section className="seccion">
+          <h1 className="visualmente-oculto">Editor de autómatas</h1>
           <h2 className="seccion-titulo">
             Autómata
             <span className={'chapa ' + (tipo === 'AFD' ? 'afd' : 'afn')}>{tipo}</span>
@@ -65,6 +67,11 @@ export function EditorPage({ historia }: { historia: Historia }) {
           </p>
           <AlfabetoEditor automata={automata} onCambio={setAutomata} />
           <div className="fila junta" style={{ marginTop: 10, flexWrap: 'wrap' }}>
+            <button className="btn chico" onClick={() => {
+              const nuevo = agregarEstado(automata, 140 + (automata.estados.length % 4) * 150, 120 + Math.floor(automata.estados.length / 4) * 120)
+              setAutomata(nuevo.automata)
+              setSeleccion(nuevo.id)
+            }}>Agregar estado</button>
             <button className="btn chico" onClick={() => setAutomata(autoDisponer(automata))}>
               Acomodar
             </button>
@@ -79,6 +86,7 @@ export function EditorPage({ historia }: { historia: Historia }) {
 
         <section className="seccion">
           <h2 className="seccion-titulo">Estado seleccionado</h2>
+          <label className="campo-etiqueta">Elegir estado<select className="campo" value={seleccion ?? ''} onChange={e => setSeleccion(e.target.value || null)}><option value="">Seleccioná un estado</option>{automata.estados.map(e => <option key={e.id} value={e.id}>{e.nombre}</option>)}</select></label>
           {!elegido ? (
             <p className="ayuda" style={{ marginTop: 0 }}>
               Con la herramienta Mover, hacé clic en un estado para editarlo.

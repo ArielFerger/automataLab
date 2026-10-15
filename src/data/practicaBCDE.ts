@@ -88,7 +88,7 @@ export const PRACTICA_E: Ejercicio[] = [
     alfabeto: ['a', 'b'],
     regular: true,
     predicado: (w) => w.length >= 3 && w[0] === w[w.length - 1],
-    nota: 'Es el mismo lenguaje que el ejercicio 57 del punto A, escrito de otra manera.',
+    nota: 'Acá se compara un símbolo al principio y al final. No es lo mismo que A57: en ese ejercicio x puede ser una cadena de longitud arbitraria.',
   },
   {
     id: 105,

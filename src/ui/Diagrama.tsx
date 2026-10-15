@@ -1,4 +1,5 @@
 import { type Automata, EPSILON, EPSILON_LABEL } from '../core/automaton'
+import { useId } from 'react'
 import { limites } from '../core/layout'
 import { RADIO, RADIO_FINAL, agruparTransiciones, arcoBucle, arcoEntre, flechaInicial } from '../core/geometria'
 
@@ -15,6 +16,9 @@ interface Props {
  * las conversiones: no se edita, se mira.
  */
 export function Diagrama({ automata, alto = 220, resaltados = [] }: Props) {
+  const identificador = useId().replace(/:/g, '')
+  const punta = identificador + '-punta'
+  const puntaAzul = identificador + '-punta-azul'
   if (automata.estados.length === 0) {
     return <p className="vacio">Sin estados.</p>
   }
@@ -32,16 +36,16 @@ export function Diagrama({ automata, alto = 220, resaltados = [] }: Props) {
       aria-label="Diagrama de transiciones"
     >
       <defs>
-        <marker id="d-punta" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <marker id={punta} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
           <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--tinta-suave)" />
         </marker>
-        <marker id="d-punta-azul" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <marker id={puntaAzul} viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
           <path d="M 0 1 L 10 5 L 0 9 z" fill="var(--azul)" />
         </marker>
       </defs>
 
       {inicial && (
-        <path d={flechaInicial(inicial)} stroke="var(--azul)" strokeWidth={1.6} fill="none" markerEnd="url(#d-punta-azul)" />
+        <path d={flechaInicial(inicial)} stroke="var(--azul)" strokeWidth={1.6} fill="none" markerEnd={`url(#${puntaAzul})`} />
       )}
 
       {manojos.map((m) => {
@@ -53,7 +57,7 @@ export function Diagrama({ automata, alto = 220, resaltados = [] }: Props) {
         const texto = m.simbolos.map((s) => (s === EPSILON ? EPSILON_LABEL : s)).join(', ')
         return (
           <g className="arco" key={m.desde + '>' + m.hasta}>
-            <path className="arco-linea" d={arco.d} markerEnd="url(#d-punta)" />
+            <path className="arco-linea" d={arco.d} markerEnd={`url(#${punta})`} />
             <rect
               className="arco-fondo"
               x={arco.etiqueta.x - (texto.length * 7.2 + 8) / 2}

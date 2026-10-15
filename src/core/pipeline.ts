@@ -5,7 +5,7 @@
  * parcial. Cada etapa guarda sus pasos para poder mostrarlos.
  */
 
-import type { Automata } from './automaton'
+import { clonar, type Automata } from './automaton'
 import { minimizar, type ResultadoMinimizacion } from './minimize'
 import { parsear, type Analisis } from './regex/parser'
 import { subconjuntos, type ResultadoSubconjuntos } from './subset'
@@ -32,8 +32,16 @@ export function convertirER(fuente: string): Conversion {
 }
 
 /** Atajo: la ER a AFD mínimo, sin los pasos intermedios. */
+const minimosRecientes = new Map<string, Automata>()
 export function erAMinimo(fuente: string): Automata {
-  return convertirER(fuente).minimo
+  let resultado = minimosRecientes.get(fuente)
+  if (!resultado) {
+    resultado = convertirER(fuente).minimo
+    if (minimosRecientes.size >= 96) minimosRecientes.delete(minimosRecientes.keys().next().value!)
+    minimosRecientes.set(fuente, resultado)
+  }
+  // El editor modifica las coordenadas: nunca debe alterar la referencia cacheada.
+  return clonar(resultado)
 }
 
 /** Determiniza y minimiza un autómata cualquiera, para poder compararlo. */
